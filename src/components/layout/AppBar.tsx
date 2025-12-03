@@ -10,9 +10,10 @@ import { Badge } from "@/components/ui/badge";
 
 interface AppBarProps {
   onMenuClick: () => void;
+  onLogout?: () => void;
 }
 
-const AppBar = ({ onMenuClick }: AppBarProps) => {
+const AppBar = ({ onMenuClick, onLogout }: AppBarProps) => {
   return (
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-4 sticky top-0 z-50">
       <div className="flex items-center gap-4">
@@ -88,7 +89,12 @@ const AppBar = ({ onMenuClick }: AppBarProps) => {
           <DropdownMenuContent align="end" className="bg-card border-border">
             <DropdownMenuItem>Mi Perfil</DropdownMenuItem>
             <DropdownMenuItem>Configuración</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">Cerrar Sesión</DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-destructive cursor-pointer"
+              onClick={onLogout}
+            >
+              Cerrar Sesión
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

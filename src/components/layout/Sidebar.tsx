@@ -11,69 +11,101 @@ import {
   ClipboardList,
   ChevronLeft,
   Activity,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState } from "react";
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const menuItems = [
+const menuGroups = [
   {
-    title: "Dashboard",
-    icon: LayoutDashboard,
-    path: "/",
+    title: "Principal",
+    items: [
+      {
+        title: "Dashboard",
+        icon: LayoutDashboard,
+        path: "/",
+      },
+    ],
   },
   {
-    title: "Gestión de Empleados",
-    icon: Users,
-    path: "/empleados",
+    title: "Gestión Central",
+    items: [
+      {
+        title: "Gestión de Empleados",
+        icon: Users,
+        path: "/empleados",
+      },
+      {
+        title: "Gestión de Plantas y Fábricas",
+        icon: Factory,
+        path: "/plantas",
+      },
+      {
+        title: "Gestión de Sensores y Máquinas",
+        icon: Cpu,
+        path: "/sensores",
+      },
+    ],
   },
   {
-    title: "Gestión de Plantas y Fábricas",
-    icon: Factory,
-    path: "/plantas",
+    title: "Producción y Control",
+    collapsible: true,
+    items: [
+      {
+        title: "Planificación de la Producción",
+        icon: Calendar,
+        path: "/planificacion",
+      },
+      {
+        title: "Gestión de Plantillas (Recetas)",
+        icon: FileText,
+        path: "/plantillas",
+      },
+    ],
   },
   {
-    title: "Gestión de Sensores y Máquinas",
-    icon: Cpu,
-    path: "/sensores",
-  },
-  {
-    title: "Monitorización de Plantas",
-    icon: Monitor,
-    path: "/monitorizacion",
-  },
-  {
-    title: "Visualización SCADA",
-    icon: Activity,
-    path: "/scada",
-  },
-  {
-    title: "Planificación de la Producción",
-    icon: Calendar,
-    path: "/planificacion",
-  },
-  {
-    title: "Gestión de Alarmas y Notificaciones",
-    icon: Bell,
-    path: "/alarmas",
-  },
-  {
-    title: "Apartado de Plantillas (Recetas)",
-    icon: FileText,
-    path: "/plantillas",
-  },
-  {
-    title: "Auditoría y Registro de Actividades",
-    icon: ClipboardList,
-    path: "/auditoria",
+    title: "Monitoreo y Auditoría",
+    items: [
+      {
+        title: "Monitorización de Plantas",
+        icon: Monitor,
+        path: "/monitorizacion",
+      },
+      {
+        title: "Visualización SCADA",
+        icon: Activity,
+        path: "/scada",
+      },
+      {
+        title: "Gestión de Alarmas y Notificaciones",
+        icon: Bell,
+        path: "/alarmas",
+      },
+      {
+        title: "Auditoría y Registro de Actividades",
+        icon: ClipboardList,
+        path: "/auditoria",
+      },
+    ],
   },
 ];
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
+  const [openGroups, setOpenGroups] = useState<string[]>(["Producción y Control"]);
+
+  const toggleGroup = (title: string) => {
+    setOpenGroups((prev) =>
+      prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
+    );
+  };
+
   return (
     <>
       {/* Overlay for mobile */}
@@ -107,29 +139,80 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-4">
-            <ul className="space-y-1 px-3">
-              {menuItems.map((item) => (
-                <li key={item.path}>
-                  <NavLink
-                    to={item.path}
-                    onClick={() => {
-                      if (window.innerWidth < 1024) onClose();
-                    }}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200",
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-primary glow-primary"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                      )
-                    }
+            {menuGroups.map((group) => (
+              <div key={group.title} className="mb-4">
+                {group.collapsible ? (
+                  <Collapsible
+                    open={openGroups.includes(group.title)}
+                    onOpenChange={() => toggleGroup(group.title)}
                   >
-                    <item.icon className="h-5 w-5 flex-shrink-0" />
-                    <span className="truncate">{item.title}</span>
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
+                    <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+                      <span>{group.title}</span>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform duration-200",
+                          openGroups.includes(group.title) && "rotate-180"
+                        )}
+                      />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <ul className="space-y-1 px-3 mt-1">
+                        {group.items.map((item) => (
+                          <li key={item.path}>
+                            <NavLink
+                              to={item.path}
+                              onClick={() => {
+                                if (window.innerWidth < 1024) onClose();
+                              }}
+                              className={({ isActive }) =>
+                                cn(
+                                  "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200",
+                                  isActive
+                                    ? "bg-sidebar-accent text-sidebar-primary glow-primary"
+                                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                )
+                              }
+                            >
+                              <item.icon className="h-5 w-5 flex-shrink-0" />
+                              <span className="truncate">{item.title}</span>
+                            </NavLink>
+                          </li>
+                        ))}
+                      </ul>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : (
+                  <>
+                    <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {group.title}
+                    </div>
+                    <ul className="space-y-1 px-3">
+                      {group.items.map((item) => (
+                        <li key={item.path}>
+                          <NavLink
+                            to={item.path}
+                            onClick={() => {
+                              if (window.innerWidth < 1024) onClose();
+                            }}
+                            className={({ isActive }) =>
+                              cn(
+                                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200",
+                                isActive
+                                  ? "bg-sidebar-accent text-sidebar-primary glow-primary"
+                                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                              )
+                            }
+                          >
+                            <item.icon className="h-5 w-5 flex-shrink-0" />
+                            <span className="truncate">{item.title}</span>
+                          </NavLink>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+            ))}
           </nav>
 
           {/* System Status Footer */}

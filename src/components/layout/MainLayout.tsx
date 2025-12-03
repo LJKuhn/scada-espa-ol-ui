@@ -4,12 +4,16 @@ import AppBar from "./AppBar";
 import Sidebar from "./Sidebar";
 import { cn } from "@/lib/utils";
 
-const MainLayout = () => {
+interface MainLayoutProps {
+  onLogout: () => void;
+}
+
+const MainLayout = ({ onLogout }: MainLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <div className="min-h-screen bg-background">
-      <AppBar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      <AppBar onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <main
