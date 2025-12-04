@@ -7,8 +7,14 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import Dashboard from "@/pages/Dashboard";
 import GestionEmpleados from "@/pages/GestionEmpleados";
+import GestionPlantas from "@/pages/GestionPlantas";
+import GestionSensores from "@/pages/GestionSensores";
 import MonitorizacionSCADA from "@/pages/MonitorizacionSCADA";
-import PlaceholderPage from "@/pages/PlaceholderPage";
+import VisualizacionSCADA from "@/pages/VisualizacionSCADA";
+import GestionAlarmas from "@/pages/GestionAlarmas";
+import Auditoria from "@/pages/Auditoria";
+import PlanificacionProduccion from "@/pages/PlanificacionProduccion";
+import GestionPlantillas from "@/pages/GestionPlantillas";
 import NotFound from "@/pages/NotFound";
 import Login from "@/pages/Login";
 
@@ -42,14 +48,14 @@ const App = () => {
                 <Route element={<MainLayout onLogout={handleLogout} />}>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/empleados" element={<GestionEmpleados />} />
-                  <Route path="/plantas" element={<PlaceholderPage />} />
-                  <Route path="/sensores" element={<PlaceholderPage />} />
+                  <Route path="/plantas" element={<GestionPlantas />} />
+                  <Route path="/sensores" element={<GestionSensores />} />
                   <Route path="/monitorizacion" element={<MonitorizacionSCADA />} />
-                  <Route path="/scada" element={<PlaceholderPage />} />
-                  <Route path="/planificacion" element={<PlaceholderPage />} />
-                  <Route path="/alarmas" element={<PlaceholderPage />} />
-                  <Route path="/plantillas" element={<PlaceholderPage />} />
-                  <Route path="/auditoria" element={<PlaceholderPage />} />
+                  <Route path="/scada" element={<VisualizacionSCADA />} />
+                  <Route path="/planificacion" element={<PlanificacionProduccion />} />
+                  <Route path="/alarmas" element={<GestionAlarmas />} />
+                  <Route path="/plantillas" element={<GestionPlantillas />} />
+                  <Route path="/auditoria" element={<Auditoria />} />
                 </Route>
                 <Route path="/login" element={<Navigate to="/" replace />} />
                 <Route path="*" element={<NotFound />} />
