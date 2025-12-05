@@ -15,6 +15,7 @@ import GestionAlarmas from "@/pages/GestionAlarmas";
 import Auditoria from "@/pages/Auditoria";
 import PlanificacionProduccion from "@/pages/PlanificacionProduccion";
 import GestionPlantillas from "@/pages/GestionPlantillas";
+import ConfiguracionMQTT from "@/pages/ConfiguracionMQTT";
 import NotFound from "@/pages/NotFound";
 import Login from "@/pages/Login";
 
@@ -56,6 +57,7 @@ const App = () => {
                   <Route path="/alarmas" element={<GestionAlarmas />} />
                   <Route path="/plantillas" element={<GestionPlantillas />} />
                   <Route path="/auditoria" element={<Auditoria />} />
+                  <Route path="/comunicacion" element={<ConfiguracionMQTT />} />
                 </Route>
                 <Route path="/login" element={<Navigate to="/" replace />} />
                 <Route path="*" element={<NotFound />} />

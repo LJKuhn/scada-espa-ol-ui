@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { Calendar, FileText, Plus, Clock, Target } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Calendar, FileText, Plus, Clock, Target, Edit, Trash2, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -12,7 +13,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "@/hooks/use-toast";
+import FormularioOrden from "@/components/FormularioOrden";
+import FormularioPlantilla from "@/components/FormularioPlantilla";
 
 interface OrdenProduccion {
   id: string;
@@ -33,111 +44,107 @@ interface Plantilla {
   tiempoEstimado: string;
 }
 
-const ordenesProduccion: OrdenProduccion[] = [
-  {
-    id: "ORD-001",
-    producto: "Producto A-100",
-    cantidad: 5000,
-    fechaInicio: "2024-01-15",
-    fechaFin: "2024-01-18",
-    planta: "Planta Norte",
-    estado: "en_proceso",
-    progreso: 65,
-  },
-  {
-    id: "ORD-002",
-    producto: "Producto B-200",
-    cantidad: 3000,
-    fechaInicio: "2024-01-16",
-    fechaFin: "2024-01-19",
-    planta: "Planta Central",
-    estado: "pendiente",
-    progreso: 0,
-  },
-  {
-    id: "ORD-003",
-    producto: "Producto C-300",
-    cantidad: 8000,
-    fechaInicio: "2024-01-14",
-    fechaFin: "2024-01-16",
-    planta: "Planta Sur",
-    estado: "completada",
-    progreso: 100,
-  },
-  {
-    id: "ORD-004",
-    producto: "Producto D-400",
-    cantidad: 2500,
-    fechaInicio: "2024-01-17",
-    fechaFin: "2024-01-20",
-    planta: "Fábrica Este",
-    estado: "pendiente",
-    progreso: 0,
-  },
+const ordenesIniciales: OrdenProduccion[] = [
+  { id: "ORD-001", producto: "Producto A-100", cantidad: 5000, fechaInicio: "2024-01-15", fechaFin: "2024-01-18", planta: "Planta Norte", estado: "en_proceso", progreso: 65 },
+  { id: "ORD-002", producto: "Producto B-200", cantidad: 3000, fechaInicio: "2024-01-16", fechaFin: "2024-01-19", planta: "Planta Central", estado: "pendiente", progreso: 0 },
+  { id: "ORD-003", producto: "Producto C-300", cantidad: 8000, fechaInicio: "2024-01-14", fechaFin: "2024-01-16", planta: "Planta Sur", estado: "completada", progreso: 100 },
+  { id: "ORD-004", producto: "Producto D-400", cantidad: 2500, fechaInicio: "2024-01-17", fechaFin: "2024-01-20", planta: "Fábrica Este", estado: "pendiente", progreso: 0 },
 ];
 
-const plantillas: Plantilla[] = [
-  {
-    id: "REC-001",
-    nombre: "Mezcla Estándar A",
-    tipo: "Producción",
-    ingredientes: "Componente A (45%), Componente B (30%), Aditivo X (25%)",
-    tiempoEstimado: "2h 30m",
-  },
-  {
-    id: "REC-002",
-    nombre: "Fórmula Premium B",
-    tipo: "Especialidad",
-    ingredientes: "Base Premium (60%), Catalizador Y (20%), Estabilizador Z (20%)",
-    tiempoEstimado: "3h 45m",
-  },
-  {
-    id: "REC-003",
-    nombre: "Receta Industrial C",
-    tipo: "Producción",
-    ingredientes: "Material Base (70%), Refuerzo R (15%), Aditivo Final (15%)",
-    tiempoEstimado: "1h 15m",
-  },
-  {
-    id: "REC-004",
-    nombre: "Compuesto Especial D",
-    tipo: "Especialidad",
-    ingredientes: "Polímero P (50%), Agente A (25%), Modificador M (25%)",
-    tiempoEstimado: "4h 00m",
-  },
+const plantillasIniciales: Plantilla[] = [
+  { id: "REC-001", nombre: "Mezcla Estándar A", tipo: "Producción", ingredientes: "Componente A (45%), Componente B (30%), Aditivo X (25%)", tiempoEstimado: "2h 30m" },
+  { id: "REC-002", nombre: "Fórmula Premium B", tipo: "Especialidad", ingredientes: "Base Premium (60%), Catalizador Y (20%), Estabilizador Z (20%)", tiempoEstimado: "3h 45m" },
+  { id: "REC-003", nombre: "Receta Industrial C", tipo: "Producción", ingredientes: "Material Base (70%), Refuerzo R (15%), Aditivo Final (15%)", tiempoEstimado: "1h 15m" },
+  { id: "REC-004", nombre: "Compuesto Especial D", tipo: "Especialidad", ingredientes: "Polímero P (50%), Agente A (25%), Modificador M (25%)", tiempoEstimado: "4h 00m" },
 ];
 
 const getEstadoConfig = (estado: OrdenProduccion["estado"]) => {
   switch (estado) {
-    case "completada":
-      return {
-        label: "Completada",
-        className: "bg-success/20 text-success border-success/30",
-      };
-    case "en_proceso":
-      return {
-        label: "En Proceso",
-        className: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-      };
-    case "pendiente":
-      return {
-        label: "Pendiente",
-        className: "bg-warning/20 text-warning border-warning/30",
-      };
+    case "completada": return { label: "Completada", className: "bg-success/20 text-success border-success/30" };
+    case "en_proceso": return { label: "En Proceso", className: "bg-blue-500/20 text-blue-400 border-blue-500/30" };
+    case "pendiente": return { label: "Pendiente", className: "bg-warning/20 text-warning border-warning/30" };
   }
 };
 
 const PlanificacionProduccion = () => {
+  const [ordenes, setOrdenes] = useState<OrdenProduccion[]>(ordenesIniciales);
+  const [plantillas, setPlantillas] = useState<Plantilla[]>(plantillasIniciales);
+  const [ordenDialogOpen, setOrdenDialogOpen] = useState(false);
+  const [plantillaDialogOpen, setPlantillaDialogOpen] = useState(false);
+  const [editingOrden, setEditingOrden] = useState<OrdenProduccion | null>(null);
+  const [editingPlantilla, setEditingPlantilla] = useState<Plantilla | null>(null);
+
+  // Filters for orders
+  const [ordenSearch, setOrdenSearch] = useState("");
+  const [ordenEstadoFilter, setOrdenEstadoFilter] = useState<string>("todos");
+
+  // Search for templates
+  const [plantillaSearch, setPlantillaSearch] = useState("");
+
+  const ordenesFiltradas = useMemo(() => {
+    return ordenes.filter((orden) => {
+      const matchesSearch = orden.producto.toLowerCase().includes(ordenSearch.toLowerCase()) ||
+                           orden.planta.toLowerCase().includes(ordenSearch.toLowerCase()) ||
+                           orden.id.toLowerCase().includes(ordenSearch.toLowerCase());
+      const matchesEstado = ordenEstadoFilter === "todos" || orden.estado === ordenEstadoFilter;
+      return matchesSearch && matchesEstado;
+    });
+  }, [ordenes, ordenSearch, ordenEstadoFilter]);
+
+  const plantillasFiltradas = useMemo(() => {
+    return plantillas.filter((plantilla) =>
+      plantilla.nombre.toLowerCase().includes(plantillaSearch.toLowerCase()) ||
+      plantilla.tipo.toLowerCase().includes(plantillaSearch.toLowerCase()) ||
+      plantilla.ingredientes.toLowerCase().includes(plantillaSearch.toLowerCase())
+    );
+  }, [plantillas, plantillaSearch]);
+
+  const handleSaveOrden = (data: Omit<OrdenProduccion, "id">) => {
+    if (editingOrden) {
+      setOrdenes(ordenes.map((o) => o.id === editingOrden.id ? { ...o, ...data } : o));
+      toast({ title: "Orden actualizada", description: "Los cambios se han guardado correctamente" });
+    } else {
+      const newOrden: OrdenProduccion = {
+        id: `ORD-${String(ordenes.length + 1).padStart(3, "0")}`,
+        ...data,
+      };
+      setOrdenes([...ordenes, newOrden]);
+      toast({ title: "Orden creada", description: "La orden se ha registrado correctamente" });
+    }
+    setEditingOrden(null);
+  };
+
+  const handleDeleteOrden = (id: string) => {
+    setOrdenes(ordenes.filter((o) => o.id !== id));
+    toast({ title: "Orden eliminada", description: "La orden ha sido eliminada del sistema" });
+  };
+
+  const handleSavePlantilla = (data: Omit<Plantilla, "id">) => {
+    if (editingPlantilla) {
+      setPlantillas(plantillas.map((p) => p.id === editingPlantilla.id ? { ...p, ...data } : p));
+      toast({ title: "Plantilla actualizada", description: "Los cambios se han guardado correctamente" });
+    } else {
+      const newPlantilla: Plantilla = {
+        id: `REC-${String(plantillas.length + 1).padStart(3, "0")}`,
+        ...data,
+      };
+      setPlantillas([...plantillas, newPlantilla]);
+      toast({ title: "Plantilla creada", description: "La plantilla se ha registrado correctamente" });
+    }
+    setEditingPlantilla(null);
+  };
+
+  const handleDeletePlantilla = (id: string) => {
+    setPlantillas(plantillas.filter((p) => p.id !== id));
+    toast({ title: "Plantilla eliminada", description: "La plantilla ha sido eliminada del sistema" });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">
-          Planificación y Recetas
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Gestiona la planificación de producción y las plantillas de recetas
-        </p>
+        <h1 className="text-2xl font-semibold text-foreground">Planificación y Recetas</h1>
+        <p className="text-muted-foreground mt-1">Gestiona la planificación de producción y las plantillas de recetas</p>
       </div>
 
       {/* Tabs */}
@@ -165,9 +172,7 @@ const PlanificacionProduccion = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Órdenes</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {ordenesProduccion.length}
-                    </p>
+                    <p className="text-2xl font-bold text-foreground">{ordenes.length}</p>
                   </div>
                 </div>
               </CardContent>
@@ -180,9 +185,7 @@ const PlanificacionProduccion = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">En Proceso</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {ordenesProduccion.filter((o) => o.estado === "en_proceso").length}
-                    </p>
+                    <p className="text-2xl font-bold text-foreground">{ordenes.filter((o) => o.estado === "en_proceso").length}</p>
                   </div>
                 </div>
               </CardContent>
@@ -195,9 +198,7 @@ const PlanificacionProduccion = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Pendientes</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {ordenesProduccion.filter((o) => o.estado === "pendiente").length}
-                    </p>
+                    <p className="text-2xl font-bold text-foreground">{ordenes.filter((o) => o.estado === "pendiente").length}</p>
                   </div>
                 </div>
               </CardContent>
@@ -210,9 +211,7 @@ const PlanificacionProduccion = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Completadas</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {ordenesProduccion.filter((o) => o.estado === "completada").length}
-                    </p>
+                    <p className="text-2xl font-bold text-foreground">{ordenes.filter((o) => o.estado === "completada").length}</p>
                   </div>
                 </div>
               </CardContent>
@@ -223,12 +222,36 @@ const PlanificacionProduccion = () => {
           <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between pb-4">
               <CardTitle className="text-lg">Órdenes de Producción</CardTitle>
-              <Button size="sm">
+              <Button size="sm" onClick={() => { setEditingOrden(null); setOrdenDialogOpen(true); }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Nueva Orden
               </Button>
             </CardHeader>
             <CardContent>
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                <div className="relative flex-1 max-w-xs">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar órdenes..."
+                    value={ordenSearch}
+                    onChange={(e) => setOrdenSearch(e.target.value)}
+                    className="pl-9 bg-background border-border"
+                  />
+                </div>
+                <Select value={ordenEstadoFilter} onValueChange={setOrdenEstadoFilter}>
+                  <SelectTrigger className="w-[160px] bg-background border-border">
+                    <SelectValue placeholder="Estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="pendiente">Pendiente</SelectItem>
+                    <SelectItem value="en_proceso">En Proceso</SelectItem>
+                    <SelectItem value="completada">Completada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="rounded-lg border border-border overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -241,43 +264,37 @@ const PlanificacionProduccion = () => {
                       <TableHead className="text-muted-foreground">Fecha Fin</TableHead>
                       <TableHead className="text-muted-foreground">Estado</TableHead>
                       <TableHead className="text-muted-foreground">Progreso</TableHead>
+                      <TableHead className="text-muted-foreground">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {ordenesProduccion.map((orden) => (
+                    {ordenesFiltradas.map((orden) => (
                       <TableRow key={orden.id}>
-                        <TableCell className="font-mono text-foreground">
-                          {orden.id}
-                        </TableCell>
-                        <TableCell className="text-foreground font-medium">
-                          {orden.producto}
-                        </TableCell>
-                        <TableCell className="text-foreground">
-                          {orden.cantidad.toLocaleString()} uds
-                        </TableCell>
-                        <TableCell className="text-foreground">
-                          {orden.planta}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(orden.fechaInicio).toLocaleDateString("es-ES")}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(orden.fechaFin).toLocaleDateString("es-ES")}
-                        </TableCell>
+                        <TableCell className="font-mono text-foreground">{orden.id}</TableCell>
+                        <TableCell className="text-foreground font-medium">{orden.producto}</TableCell>
+                        <TableCell className="text-foreground">{orden.cantidad.toLocaleString()} uds</TableCell>
+                        <TableCell className="text-foreground">{orden.planta}</TableCell>
+                        <TableCell className="text-muted-foreground">{new Date(orden.fechaInicio).toLocaleDateString("es-ES")}</TableCell>
+                        <TableCell className="text-muted-foreground">{new Date(orden.fechaFin).toLocaleDateString("es-ES")}</TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={getEstadoConfig(orden.estado).className}
-                          >
+                          <Badge variant="outline" className={getEstadoConfig(orden.estado).className}>
                             {getEstadoConfig(orden.estado).label}
                           </Badge>
                         </TableCell>
                         <TableCell className="w-32">
                           <div className="flex items-center gap-2">
                             <Progress value={orden.progreso} className="h-2 flex-1" />
-                            <span className="text-xs text-muted-foreground font-mono w-10">
-                              {orden.progreso}%
-                            </span>
+                            <span className="text-xs text-muted-foreground font-mono w-10">{orden.progreso}%</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => { setEditingOrden(orden); setOrdenDialogOpen(true); }}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteOrden(orden.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -292,12 +309,9 @@ const PlanificacionProduccion = () => {
           <Card className="bg-card border-border">
             <CardContent className="p-8 text-center">
               <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">
-                Herramientas de Planificación a Largo Plazo
-              </h3>
+              <h3 className="text-lg font-medium text-foreground mb-2">Herramientas de Planificación a Largo Plazo</h3>
               <p className="text-muted-foreground max-w-md mx-auto">
-                Aquí se integrarán herramientas avanzadas de planificación como
-                calendarios de producción, análisis de capacidad y optimización de recursos.
+                Aquí se integrarán herramientas avanzadas de planificación como calendarios de producción, análisis de capacidad y optimización de recursos.
               </p>
             </CardContent>
           </Card>
@@ -308,12 +322,23 @@ const PlanificacionProduccion = () => {
           <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between pb-4">
               <CardTitle className="text-lg">Gestión de Plantillas (Recetas)</CardTitle>
-              <Button size="sm">
+              <Button size="sm" onClick={() => { setEditingPlantilla(null); setPlantillaDialogOpen(true); }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Nueva Plantilla
               </Button>
             </CardHeader>
             <CardContent>
+              {/* Search */}
+              <div className="relative max-w-xs mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar plantillas..."
+                  value={plantillaSearch}
+                  onChange={(e) => setPlantillaSearch(e.target.value)}
+                  className="pl-9 bg-background border-border"
+                />
+              </div>
+
               <div className="rounded-lg border border-border overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -323,34 +348,33 @@ const PlanificacionProduccion = () => {
                       <TableHead className="text-muted-foreground">Tipo</TableHead>
                       <TableHead className="text-muted-foreground">Ingredientes</TableHead>
                       <TableHead className="text-muted-foreground">Tiempo Estimado</TableHead>
+                      <TableHead className="text-muted-foreground">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {plantillas.map((plantilla) => (
+                    {plantillasFiltradas.map((plantilla) => (
                       <TableRow key={plantilla.id}>
-                        <TableCell className="font-mono text-foreground">
-                          {plantilla.id}
-                        </TableCell>
-                        <TableCell className="text-foreground font-medium">
-                          {plantilla.nombre}
-                        </TableCell>
+                        <TableCell className="font-mono text-foreground">{plantilla.id}</TableCell>
+                        <TableCell className="text-foreground font-medium">{plantilla.nombre}</TableCell>
                         <TableCell>
                           <Badge
                             variant="outline"
-                            className={
-                              plantilla.tipo === "Producción"
-                                ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                                : "bg-purple-500/20 text-purple-400 border-purple-500/30"
-                            }
+                            className={plantilla.tipo === "Producción" ? "bg-blue-500/20 text-blue-400 border-blue-500/30" : "bg-purple-500/20 text-purple-400 border-purple-500/30"}
                           >
                             {plantilla.tipo}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground max-w-md truncate">
-                          {plantilla.ingredientes}
-                        </TableCell>
-                        <TableCell className="font-mono text-foreground">
-                          {plantilla.tiempoEstimado}
+                        <TableCell className="text-muted-foreground max-w-md truncate">{plantilla.ingredientes}</TableCell>
+                        <TableCell className="font-mono text-foreground">{plantilla.tiempoEstimado}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => { setEditingPlantilla(plantilla); setPlantillaDialogOpen(true); }}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeletePlantilla(plantilla.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -361,6 +385,20 @@ const PlanificacionProduccion = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <FormularioOrden
+        open={ordenDialogOpen}
+        onOpenChange={setOrdenDialogOpen}
+        orden={editingOrden}
+        onSave={handleSaveOrden}
+      />
+
+      <FormularioPlantilla
+        open={plantillaDialogOpen}
+        onOpenChange={setPlantillaDialogOpen}
+        plantilla={editingPlantilla}
+        onSave={handleSavePlantilla}
+      />
     </div>
   );
 };

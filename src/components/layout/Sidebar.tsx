@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   Activity,
   ChevronDown,
+  Wifi,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,72 +28,38 @@ const menuGroups = [
   {
     title: "Principal",
     items: [
-      {
-        title: "Dashboard",
-        icon: LayoutDashboard,
-        path: "/",
-      },
+      { title: "Dashboard", icon: LayoutDashboard, path: "/" },
     ],
   },
   {
     title: "Gestión Central",
     items: [
-      {
-        title: "Gestión de Empleados",
-        icon: Users,
-        path: "/empleados",
-      },
-      {
-        title: "Gestión de Plantas y Fábricas",
-        icon: Factory,
-        path: "/plantas",
-      },
-      {
-        title: "Gestión de Sensores y Máquinas",
-        icon: Cpu,
-        path: "/sensores",
-      },
+      { title: "Gestión de Empleados", icon: Users, path: "/empleados" },
+      { title: "Gestión de Plantas y Fábricas", icon: Factory, path: "/plantas" },
+      { title: "Gestión de Sensores y Máquinas", icon: Cpu, path: "/sensores" },
     ],
   },
   {
     title: "Producción y Control",
     collapsible: true,
     items: [
-      {
-        title: "Planificación de la Producción",
-        icon: Calendar,
-        path: "/planificacion",
-      },
-      {
-        title: "Gestión de Plantillas (Recetas)",
-        icon: FileText,
-        path: "/plantillas",
-      },
+      { title: "Planificación de la Producción", icon: Calendar, path: "/planificacion" },
+      { title: "Gestión de Plantillas (Recetas)", icon: FileText, path: "/plantillas" },
     ],
   },
   {
     title: "Monitoreo y Auditoría",
     items: [
-      {
-        title: "Monitorización de Plantas",
-        icon: Monitor,
-        path: "/monitorizacion",
-      },
-      {
-        title: "Visualización SCADA",
-        icon: Activity,
-        path: "/scada",
-      },
-      {
-        title: "Gestión de Alarmas y Notificaciones",
-        icon: Bell,
-        path: "/alarmas",
-      },
-      {
-        title: "Auditoría y Registro de Actividades",
-        icon: ClipboardList,
-        path: "/auditoria",
-      },
+      { title: "Monitorización de Plantas", icon: Monitor, path: "/monitorizacion" },
+      { title: "Visualización SCADA", icon: Activity, path: "/scada" },
+      { title: "Gestión de Alarmas y Notificaciones", icon: Bell, path: "/alarmas" },
+      { title: "Auditoría y Registro de Actividades", icon: ClipboardList, path: "/auditoria" },
+    ],
+  },
+  {
+    title: "Comunicación",
+    items: [
+      { title: "Configuración MQTT", icon: Wifi, path: "/comunicacion" },
     ],
   },
 ];
