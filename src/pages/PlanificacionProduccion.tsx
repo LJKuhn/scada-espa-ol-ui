@@ -77,6 +77,8 @@ const PlanificacionProduccion = () => {
   // Filters for orders
   const [ordenSearch, setOrdenSearch] = useState("");
   const [ordenEstadoFilter, setOrdenEstadoFilter] = useState<string>("todos");
+  const [ordenFechaInicio, setOrdenFechaInicio] = useState("");
+  const [ordenFechaFin, setOrdenFechaFin] = useState("");
 
   // Search for templates
   const [plantillaSearch, setPlantillaSearch] = useState("");
@@ -87,9 +89,15 @@ const PlanificacionProduccion = () => {
                            orden.planta.toLowerCase().includes(ordenSearch.toLowerCase()) ||
                            orden.id.toLowerCase().includes(ordenSearch.toLowerCase());
       const matchesEstado = ordenEstadoFilter === "todos" || orden.estado === ordenEstadoFilter;
-      return matchesSearch && matchesEstado;
+      
+      // Date range filter
+      const ordenDate = new Date(orden.fechaInicio);
+      const matchesFechaInicio = !ordenFechaInicio || ordenDate >= new Date(ordenFechaInicio);
+      const matchesFechaFin = !ordenFechaFin || ordenDate <= new Date(ordenFechaFin);
+      
+      return matchesSearch && matchesEstado && matchesFechaInicio && matchesFechaFin;
     });
-  }, [ordenes, ordenSearch, ordenEstadoFilter]);
+  }, [ordenes, ordenSearch, ordenEstadoFilter, ordenFechaInicio, ordenFechaFin]);
 
   const plantillasFiltradas = useMemo(() => {
     return plantillas.filter((plantilla) =>
@@ -229,27 +237,54 @@ const PlanificacionProduccion = () => {
             </CardHeader>
             <CardContent>
               {/* Filters */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                <div className="relative flex-1 max-w-xs">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar órdenes..."
-                    value={ordenSearch}
-                    onChange={(e) => setOrdenSearch(e.target.value)}
-                    className="pl-9 bg-background border-border"
-                  />
+              <div className="flex flex-col gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="relative flex-1 max-w-xs">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar órdenes..."
+                      value={ordenSearch}
+                      onChange={(e) => setOrdenSearch(e.target.value)}
+                      className="pl-9 bg-background border-border"
+                    />
+                  </div>
+                  <Select value={ordenEstadoFilter} onValueChange={setOrdenEstadoFilter}>
+                    <SelectTrigger className="w-[160px] bg-background border-border">
+                      <SelectValue placeholder="Estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="pendiente">Pendiente</SelectItem>
+                      <SelectItem value="en_proceso">En Proceso</SelectItem>
+                      <SelectItem value="completada">Completada</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Select value={ordenEstadoFilter} onValueChange={setOrdenEstadoFilter}>
-                  <SelectTrigger className="w-[160px] bg-background border-border">
-                    <SelectValue placeholder="Estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="pendiente">Pendiente</SelectItem>
-                    <SelectItem value="en_proceso">En Proceso</SelectItem>
-                    <SelectItem value="completada">Completada</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Desde:</span>
+                    <Input
+                      type="date"
+                      value={ordenFechaInicio}
+                      onChange={(e) => setOrdenFechaInicio(e.target.value)}
+                      className="w-auto bg-background border-border"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Hasta:</span>
+                    <Input
+                      type="date"
+                      value={ordenFechaFin}
+                      onChange={(e) => setOrdenFechaFin(e.target.value)}
+                      className="w-auto bg-background border-border"
+                    />
+                  </div>
+                  {(ordenFechaInicio || ordenFechaFin) && (
+                    <Button variant="ghost" size="sm" onClick={() => { setOrdenFechaInicio(""); setOrdenFechaFin(""); }}>
+                      Limpiar fechas
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="rounded-lg border border-border overflow-hidden">

@@ -55,6 +55,8 @@ const GestionAlarmas = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filtroSeveridad, setFiltroSeveridad] = useState<string>("todas");
   const [filtroEstado, setFiltroEstado] = useState<string>("todas");
+  const [fechaInicio, setFechaInicio] = useState("");
+  const [fechaFin, setFechaFin] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAlarma, setEditingAlarma] = useState<Alarma | null>(null);
 
@@ -65,7 +67,13 @@ const GestionAlarmas = () => {
       alarma.sensorMaquina.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSeveridad = filtroSeveridad === "todas" || alarma.severidad === filtroSeveridad;
     const matchesEstado = filtroEstado === "todas" || alarma.estado === filtroEstado;
-    return matchesSearch && matchesSeveridad && matchesEstado;
+    
+    // Date range filter
+    const alarmaDate = new Date(alarma.fechaHora.split(" ")[0]);
+    const matchesFechaInicio = !fechaInicio || alarmaDate >= new Date(fechaInicio);
+    const matchesFechaFin = !fechaFin || alarmaDate <= new Date(fechaFin);
+    
+    return matchesSearch && matchesSeveridad && matchesEstado && matchesFechaInicio && matchesFechaFin;
   });
 
   const toggleEstado = (id: string) => {
@@ -166,36 +174,63 @@ const GestionAlarmas = () => {
       {/* Filters and Table */}
       <Card className="bg-card border-border">
         <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Input
-              placeholder="Buscar alarmas..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="sm:max-w-xs bg-background border-border"
-            />
-            <div className="flex gap-2 flex-wrap">
-              <Select value={filtroSeveridad} onValueChange={setFiltroSeveridad}>
-                <SelectTrigger className="w-[140px] bg-background border-border">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Severidad" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="media">Media</SelectItem>
-                  <SelectItem value="baja">Baja</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filtroEstado} onValueChange={setFiltroEstado}>
-                <SelectTrigger className="w-[140px] bg-background border-border">
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas</SelectItem>
-                  <SelectItem value="abierta">Abiertas</SelectItem>
-                  <SelectItem value="cerrada">Cerradas</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Input
+                placeholder="Buscar alarmas..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="sm:max-w-xs bg-background border-border"
+              />
+              <div className="flex gap-2 flex-wrap">
+                <Select value={filtroSeveridad} onValueChange={setFiltroSeveridad}>
+                  <SelectTrigger className="w-[140px] bg-background border-border">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Severidad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="media">Media</SelectItem>
+                    <SelectItem value="baja">Baja</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filtroEstado} onValueChange={setFiltroEstado}>
+                  <SelectTrigger className="w-[140px] bg-background border-border">
+                    <SelectValue placeholder="Estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas</SelectItem>
+                    <SelectItem value="abierta">Abiertas</SelectItem>
+                    <SelectItem value="cerrada">Cerradas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Desde:</span>
+                <Input
+                  type="date"
+                  value={fechaInicio}
+                  onChange={(e) => setFechaInicio(e.target.value)}
+                  className="w-auto bg-background border-border"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Hasta:</span>
+                <Input
+                  type="date"
+                  value={fechaFin}
+                  onChange={(e) => setFechaFin(e.target.value)}
+                  className="w-auto bg-background border-border"
+                />
+              </div>
+              {(fechaInicio || fechaFin) && (
+                <Button variant="ghost" size="sm" onClick={() => { setFechaInicio(""); setFechaFin(""); }}>
+                  Limpiar fechas
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
