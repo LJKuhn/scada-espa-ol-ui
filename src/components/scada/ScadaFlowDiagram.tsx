@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   ReactFlow,
   Node,
@@ -24,7 +24,40 @@ const nodeTypes = {
   sensor: SensorNode,
 };
 
-const initialNodes: Node[] = [
+// Define systems and their components
+export const systemDefinitions = {
+  'planta-completa': {
+    label: 'Planta Completa',
+    nodeIds: ['tank-1', 'tank-2', 'valve-1', 'valve-2', 'pump-1', 'mixer-1', 'sensor-1', 'sensor-2', 'sensor-3', 'tank-3'],
+  },
+  'sistema-preparacion': {
+    label: 'Sistema de Preparación',
+    nodeIds: ['tank-1', 'tank-2', 'valve-1', 'valve-2', 'pump-1'],
+  },
+  'sistema-mezclado': {
+    label: 'Sistema de Mezclado',
+    nodeIds: ['pump-1', 'mixer-1', 'sensor-1', 'sensor-2', 'sensor-3'],
+  },
+  'sistema-salida': {
+    label: 'Sistema de Salida',
+    nodeIds: ['mixer-1', 'sensor-1', 'sensor-2', 'sensor-3', 'tank-3'],
+  },
+};
+
+export const machineDefinitions = {
+  'tank-1': { label: 'Tanque A', connectedNodes: ['valve-1'] },
+  'tank-2': { label: 'Tanque B', connectedNodes: ['valve-2'] },
+  'valve-1': { label: 'Válvula V1', connectedNodes: ['tank-1', 'pump-1'] },
+  'valve-2': { label: 'Válvula V2', connectedNodes: ['tank-2', 'pump-1'] },
+  'pump-1': { label: 'Bomba P1', connectedNodes: ['valve-1', 'valve-2', 'mixer-1'] },
+  'mixer-1': { label: 'Mezclador M1', connectedNodes: ['pump-1', 'sensor-1', 'sensor-2', 'sensor-3', 'tank-3'] },
+  'sensor-1': { label: 'Sensor Temp', connectedNodes: ['mixer-1'] },
+  'sensor-2': { label: 'Sensor Presión', connectedNodes: ['mixer-1'] },
+  'sensor-3': { label: 'Sensor Flujo', connectedNodes: ['mixer-1'] },
+  'tank-3': { label: 'Tanque Salida', connectedNodes: ['mixer-1'] },
+};
+
+const allNodes: Node[] = [
   {
     id: 'tank-1',
     type: 'tank',
@@ -87,7 +120,7 @@ const initialNodes: Node[] = [
   },
 ];
 
-const initialEdges: Edge[] = [
+const allEdges: Edge[] = [
   { id: 'e1', source: 'tank-1', target: 'valve-1', animated: true, style: { stroke: 'hsl(var(--primary))' } },
   { id: 'e2', source: 'tank-2', target: 'valve-2', animated: true, style: { stroke: 'hsl(var(--primary))' } },
   { id: 'e3', source: 'valve-1', target: 'pump-1', animated: true, style: { stroke: 'hsl(var(--primary))' } },
@@ -99,9 +132,52 @@ const initialEdges: Edge[] = [
   { id: 'e9', source: 'mixer-1', target: 'tank-3', animated: true, style: { stroke: 'hsl(var(--primary))' } },
 ];
 
-const ScadaFlowDiagram = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+interface ScadaFlowDiagramProps {
+  selectedView?: string;
+}
+
+const ScadaFlowDiagram = ({ selectedView = 'planta-completa' }: ScadaFlowDiagramProps) => {
+  const filteredData = useMemo(() => {
+    let nodeIds: string[] = [];
+
+    // Check if it's a system view
+    if (selectedView in systemDefinitions) {
+      nodeIds = systemDefinitions[selectedView as keyof typeof systemDefinitions].nodeIds;
+    } 
+    // Check if it's a machine view
+    else if (selectedView in machineDefinitions) {
+      const machine = machineDefinitions[selectedView as keyof typeof machineDefinitions];
+      nodeIds = [selectedView, ...machine.connectedNodes];
+    }
+
+    const filteredNodes = allNodes.filter(node => nodeIds.includes(node.id));
+    const filteredEdges = allEdges.filter(edge => 
+      nodeIds.includes(edge.source) && nodeIds.includes(edge.target)
+    );
+
+    // Reposition nodes for better view when filtered
+    if (selectedView !== 'planta-completa') {
+      const repositionedNodes = filteredNodes.map((node, index) => ({
+        ...node,
+        position: {
+          x: 100 + (index % 3) * 200,
+          y: 80 + Math.floor(index / 3) * 180,
+        },
+      }));
+      return { nodes: repositionedNodes, edges: filteredEdges };
+    }
+
+    return { nodes: filteredNodes, edges: filteredEdges };
+  }, [selectedView]);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(filteredData.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(filteredData.edges);
+
+  // Update nodes when view changes
+  useEffect(() => {
+    setNodes(filteredData.nodes);
+    setEdges(filteredData.edges);
+  }, [filteredData, setNodes, setEdges]);
 
   // Simulate real-time data updates
   useEffect(() => {
@@ -178,7 +254,7 @@ const ScadaFlowDiagram = () => {
         fitView
         minZoom={0.5}
         maxZoom={2}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.9 }}
+        key={selectedView}
       >
         <Background color="hsl(var(--muted-foreground))" gap={20} size={1} />
         <Controls className="bg-card border-border" />
