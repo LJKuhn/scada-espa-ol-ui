@@ -1,15 +1,53 @@
-import { Activity, Settings, Play, Pause, RotateCcw, Info, Maximize2 } from "lucide-react";
+import { Activity, Settings, Play, Pause, RotateCcw, Maximize2, Filter, Layers } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { useState } from "react";
-import ScadaFlowDiagram from "@/components/scada/ScadaFlowDiagram";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useMemo } from "react";
+import ScadaFlowDiagram, { systemDefinitions, machineDefinitions } from "@/components/scada/ScadaFlowDiagram";
 
 const VisualizacionSCADA = () => {
   const [isRunning, setIsRunning] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [selectedView, setSelectedView] = useState('planta-completa');
+
+  // Get relevant controls based on selected view
+  const relevantControls = useMemo(() => {
+    const allControls = [
+      { id: 'valve-1', label: 'Válvula V1', status: 'Abierta', statusColor: 'outline', actions: ['Cerrar', 'Auto'] },
+      { id: 'valve-2', label: 'Válvula V2', status: 'Abierta', statusColor: 'outline', actions: ['Cerrar', 'Auto'] },
+      { id: 'pump-1', label: 'Bomba P1', status: 'Activa', statusColor: 'success', actions: ['Detener', 'Auto'] },
+      { id: 'mixer-1', label: 'Mezclador M1', status: 'Activo', statusColor: 'success', actions: ['Detener', 'Auto'] },
+    ];
+
+    if (selectedView === 'planta-completa') {
+      return allControls;
+    }
+
+    let visibleNodeIds: string[] = [];
+    
+    if (selectedView in systemDefinitions) {
+      visibleNodeIds = systemDefinitions[selectedView as keyof typeof systemDefinitions].nodeIds;
+    } else if (selectedView in machineDefinitions) {
+      const machine = machineDefinitions[selectedView as keyof typeof machineDefinitions];
+      visibleNodeIds = [selectedView, ...machine.connectedNodes];
+    }
+
+    return allControls.filter(control => visibleNodeIds.includes(control.id));
+  }, [selectedView]);
+
+  // Get current view label
+  const currentViewLabel = useMemo(() => {
+    if (selectedView in systemDefinitions) {
+      return systemDefinitions[selectedView as keyof typeof systemDefinitions].label;
+    }
+    if (selectedView in machineDefinitions) {
+      return machineDefinitions[selectedView as keyof typeof machineDefinitions].label;
+    }
+    return 'Vista Desconocida';
+  }, [selectedView]);
 
   return (
     <div className="space-y-6">
@@ -36,28 +74,84 @@ const VisualizacionSCADA = () => {
         <div className="xl:col-span-3 space-y-4">
           <Card className="bg-card border-border">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <CardTitle className="text-lg font-medium flex items-center gap-2">
                   <Activity className="h-5 w-5 text-primary" />
                   Diagrama de Proceso en Tiempo Real
                 </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Actualizar
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)}>
-                    <Maximize2 className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Settings className="h-4 w-4" />
-                  </Button>
+                
+                {/* Hierarchical View Selector */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-2 bg-background/50 rounded-lg p-1 border border-border">
+                    <Layers className="h-4 w-4 text-muted-foreground ml-2" />
+                    <Select value={selectedView} onValueChange={setSelectedView}>
+                      <SelectTrigger className="w-[200px] border-0 bg-transparent focus:ring-0">
+                        <SelectValue placeholder="Seleccionar vista" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        {/* Plant Level */}
+                        <SelectItem value="planta-completa" className="font-semibold">
+                          🏭 Planta Completa
+                        </SelectItem>
+                        
+                        {/* Systems */}
+                        <div className="px-2 py-1 text-xs text-muted-foreground font-medium border-t border-border mt-1 pt-2">
+                          SISTEMAS
+                        </div>
+                        <SelectItem value="sistema-preparacion">
+                          ⚙️ Sistema de Preparación
+                        </SelectItem>
+                        <SelectItem value="sistema-mezclado">
+                          ⚙️ Sistema de Mezclado
+                        </SelectItem>
+                        <SelectItem value="sistema-salida">
+                          ⚙️ Sistema de Salida
+                        </SelectItem>
+                        
+                        {/* Individual Machines */}
+                        <div className="px-2 py-1 text-xs text-muted-foreground font-medium border-t border-border mt-1 pt-2">
+                          MÁQUINAS
+                        </div>
+                        <SelectItem value="tank-1">🛢️ Tanque A</SelectItem>
+                        <SelectItem value="tank-2">🛢️ Tanque B</SelectItem>
+                        <SelectItem value="tank-3">🛢️ Tanque Salida</SelectItem>
+                        <SelectItem value="valve-1">🔧 Válvula V1</SelectItem>
+                        <SelectItem value="valve-2">🔧 Válvula V2</SelectItem>
+                        <SelectItem value="pump-1">⚡ Bomba P1</SelectItem>
+                        <SelectItem value="mixer-1">🔄 Mezclador M1</SelectItem>
+                        <SelectItem value="sensor-1">📡 Sensor Temp</SelectItem>
+                        <SelectItem value="sensor-2">📡 Sensor Presión</SelectItem>
+                        <SelectItem value="sensor-3">📡 Sensor Flujo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Actualizar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)}>
+                      <Maximize2 className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
+              </div>
+              
+              {/* Current View Badge */}
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant="secondary" className="text-xs">
+                  <Filter className="h-3 w-3 mr-1" />
+                  Vista: {currentViewLabel}
+                </Badge>
               </div>
             </CardHeader>
             <CardContent>
               {/* Dynamic SCADA Flow Diagram */}
-              <ScadaFlowDiagram />
+              <ScadaFlowDiagram selectedView={selectedView} />
               
               {/* Legend */}
               <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
@@ -195,65 +289,49 @@ const VisualizacionSCADA = () => {
 
                 <TabsContent value="controles" className="p-4 mt-0">
                   <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-foreground">
-                      Controles Manuales
-                    </h4>
-                    <div className="space-y-3">
-                      <div className="p-3 rounded-lg bg-background/50 border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-foreground">Válvula V1</span>
-                          <Badge variant="outline" className="text-xs">
-                            Abierta
-                          </Badge>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" className="flex-1">
-                            Cerrar
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1">
-                            Auto
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-lg bg-background/50 border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-foreground">Bomba P1</span>
-                          <Badge
-                            variant="outline"
-                            className="text-xs bg-success/20 text-success"
-                          >
-                            Activa
-                          </Badge>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" className="flex-1">
-                            Detener
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1">
-                            Auto
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-lg bg-background/50 border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-foreground">Motor M2</span>
-                          <Badge
-                            variant="outline"
-                            className="text-xs bg-warning/20 text-warning"
-                          >
-                            Manual
-                          </Badge>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" className="flex-1">
-                            Iniciar
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1">
-                            Auto
-                          </Button>
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-foreground">
+                        Controles Manuales
+                      </h4>
+                      <Badge variant="outline" className="text-xs">
+                        {relevantControls.length} disponibles
+                      </Badge>
                     </div>
+                    
+                    {relevantControls.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground text-sm">
+                        No hay controles disponibles para esta vista
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {relevantControls.map((control) => (
+                          <div key={control.id} className="p-3 rounded-lg bg-background/50 border border-border">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm text-foreground">{control.label}</span>
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs ${
+                                  control.statusColor === 'success' 
+                                    ? 'bg-success/20 text-success' 
+                                    : control.statusColor === 'warning'
+                                    ? 'bg-warning/20 text-warning'
+                                    : ''
+                                }`}
+                              >
+                                {control.status}
+                              </Badge>
+                            </div>
+                            <div className="flex gap-2">
+                              {control.actions.map((action) => (
+                                <Button key={action} variant="outline" size="sm" className="flex-1">
+                                  {action}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>
