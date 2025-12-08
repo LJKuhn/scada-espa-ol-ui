@@ -1,11 +1,16 @@
-import { Activity, Settings, Play, Pause, RotateCcw, Info } from "lucide-react";
+import { Activity, Settings, Play, Pause, RotateCcw, Info, Maximize2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { useState } from "react";
+import ScadaFlowDiagram from "@/components/scada/ScadaFlowDiagram";
 
 const VisualizacionSCADA = () => {
+  const [isRunning, setIsRunning] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -20,7 +25,7 @@ const VisualizacionSCADA = () => {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="bg-success/20 text-success border-success/30">
-            <div className="status-dot status-dot-operational mr-2" />
+            <div className="w-2 h-2 rounded-full bg-success mr-2 animate-pulse" />
             Conectado
           </Badge>
         </div>
@@ -37,9 +42,12 @@ const VisualizacionSCADA = () => {
                   Diagrama de Proceso en Tiempo Real
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Actualizar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)}>
+                    <Maximize2 className="h-4 w-4" />
                   </Button>
                   <Button variant="outline" size="sm">
                     <Settings className="h-4 w-4" />
@@ -48,36 +56,30 @@ const VisualizacionSCADA = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {/* Diagram Placeholder */}
-              <div className="relative w-full h-[500px] rounded-lg bg-background/50 border border-dashed border-border flex flex-col items-center justify-center">
-                {/* Simulated Process Flow */}
-                <div className="absolute inset-4 grid grid-cols-5 gap-4 opacity-30">
-                  {[...Array(15)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="rounded-lg border border-primary/20 bg-primary/5"
-                    />
-                  ))}
+              {/* Dynamic SCADA Flow Diagram */}
+              <ScadaFlowDiagram />
+              
+              {/* Legend */}
+              <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded bg-primary" />
+                  <span>Tanques</span>
                 </div>
-                
-                {/* Center Content */}
-                <div className="relative z-10 text-center space-y-4 p-8">
-                  <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-                    <Activity className="h-10 w-10 text-primary animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground mb-2">
-                      Área de Diagrama Dinámico
-                    </h3>
-                    <p className="text-muted-foreground max-w-md">
-                      Aquí se visualizará el diagrama de proceso interactivo con
-                      los flujos de producción, sensores y estados de las máquinas.
-                    </p>
-                  </div>
-                  <Badge variant="secondary" className="gap-2">
-                    <Info className="h-3 w-3" />
-                    Integración D3.js/JointJS para el diagrama dinámico
-                  </Badge>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded bg-success" />
+                  <span>Bombas</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded bg-warning" />
+                  <span>Válvulas</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded bg-info" />
+                  <span>Mezcladores</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-muted-foreground" />
+                  <span>Sensores</span>
                 </div>
               </div>
             </CardContent>
@@ -91,16 +93,25 @@ const VisualizacionSCADA = () => {
                   <span className="text-sm text-muted-foreground">
                     Estado del Proceso:
                   </span>
-                  <Badge className="bg-success/20 text-success border-success/30">
-                    En Ejecución
+                  <Badge className={isRunning ? "bg-success/20 text-success border-success/30" : "bg-muted text-muted-foreground"}>
+                    {isRunning ? "En Ejecución" : "Detenido"}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setIsRunning(false)}
+                    disabled={!isRunning}
+                  >
                     <Pause className="h-4 w-4 mr-2" />
                     Pausar
                   </Button>
-                  <Button size="sm">
+                  <Button 
+                    size="sm"
+                    onClick={() => setIsRunning(true)}
+                    disabled={isRunning}
+                  >
                     <Play className="h-4 w-4 mr-2" />
                     Iniciar
                   </Button>
