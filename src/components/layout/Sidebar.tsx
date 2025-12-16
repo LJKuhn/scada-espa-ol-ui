@@ -13,6 +13,7 @@ import {
   Activity,
   ChevronDown,
   Wifi,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ const menuGroups = [
       { title: "Gestión de Empleados", icon: Users, path: "/empleados" },
       { title: "Gestión de Plantas y Fábricas", icon: Factory, path: "/plantas" },
       { title: "Gestión de Sensores y Máquinas", icon: Cpu, path: "/sensores" },
+      { title: "Administración de Almacenamiento", icon: Database, path: "/almacenamiento" },
     ],
   },
   {

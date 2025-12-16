@@ -15,6 +15,7 @@ import PumpNode from './nodes/PumpNode';
 import ValveNode from './nodes/ValveNode';
 import MixerNode from './nodes/MixerNode';
 import SensorNode from './nodes/SensorNode';
+import { useStorage } from '@/contexts/StorageContext';
 
 const nodeTypes = {
   tank: TankNode,
@@ -57,68 +58,86 @@ export const machineDefinitions = {
   'tank-3': { label: 'Tanque Salida', connectedNodes: ['mixer-1'] },
 };
 
-const allNodes: Node[] = [
-  {
-    id: 'tank-1',
-    type: 'tank',
-    position: { x: 50, y: 50 },
-    data: { label: 'Tanque A', level: 75, temperature: 25, capacity: 1000, unit: 'L', status: 'active' },
-  },
-  {
-    id: 'tank-2',
-    type: 'tank',
-    position: { x: 50, y: 280 },
-    data: { label: 'Tanque B', level: 45, temperature: 30, capacity: 800, unit: 'L', status: 'active' },
-  },
-  {
-    id: 'valve-1',
-    type: 'valve',
-    position: { x: 220, y: 100 },
-    data: { label: 'Válvula V1', isOpen: true, flowRate: 12.5 },
-  },
-  {
-    id: 'valve-2',
-    type: 'valve',
-    position: { x: 220, y: 330 },
-    data: { label: 'Válvula V2', isOpen: true, flowRate: 8.3 },
-  },
-  {
-    id: 'pump-1',
-    type: 'pump',
-    position: { x: 350, y: 180 },
-    data: { label: 'Bomba P1', isRunning: true, rpm: 1450, power: 75 },
-  },
-  {
-    id: 'mixer-1',
-    type: 'mixer',
-    position: { x: 500, y: 150 },
-    data: { label: 'Mezclador M1', isRunning: true, speed: 120, temperature: 45 },
-  },
-  {
-    id: 'sensor-1',
-    type: 'sensor',
-    position: { x: 650, y: 80 },
-    data: { label: 'Sensor Temp', value: 45.2, unit: '°C', type: 'temperature', status: 'normal' },
-  },
-  {
-    id: 'sensor-2',
-    type: 'sensor',
-    position: { x: 650, y: 180 },
-    data: { label: 'Sensor Presión', value: 2.4, unit: 'bar', type: 'pressure', status: 'normal' },
-  },
-  {
-    id: 'sensor-3',
-    type: 'sensor',
-    position: { x: 650, y: 280 },
-    data: { label: 'Sensor Flujo', value: 18.7, unit: 'L/min', type: 'flow', status: 'warning' },
-  },
-  {
-    id: 'tank-3',
-    type: 'tank',
-    position: { x: 780, y: 130 },
-    data: { label: 'Tanque Salida', level: 30, temperature: 42, capacity: 1500, unit: 'L', status: 'active' },
-  },
-];
+const createInitialNodes = (storageUnits: ReturnType<typeof useStorage>['storageUnits']): Node[] => {
+  const getStorageData = (nodeId: string) => {
+    const unit = storageUnits.find(u => u.nodeId === nodeId);
+    if (unit) {
+      return {
+        label: `${unit.name} (${unit.content})`,
+        level: Math.round((unit.currentVolume / unit.capacity) * 100),
+        temperature: unit.temperature || 25,
+        capacity: unit.capacity,
+        unit: unit.unit,
+        status: unit.status,
+        content: unit.content,
+      };
+    }
+    return null;
+  };
+
+  return [
+    {
+      id: 'tank-1',
+      type: 'tank',
+      position: { x: 50, y: 50 },
+      data: getStorageData('tank-1') || { label: 'Tanque A', level: 75, temperature: 25, capacity: 1000, unit: 'L', status: 'active' },
+    },
+    {
+      id: 'tank-2',
+      type: 'tank',
+      position: { x: 50, y: 280 },
+      data: getStorageData('tank-2') || { label: 'Tanque B', level: 45, temperature: 30, capacity: 800, unit: 'L', status: 'active' },
+    },
+    {
+      id: 'valve-1',
+      type: 'valve',
+      position: { x: 220, y: 100 },
+      data: { label: 'Válvula V1', isOpen: true, flowRate: 12.5 },
+    },
+    {
+      id: 'valve-2',
+      type: 'valve',
+      position: { x: 220, y: 330 },
+      data: { label: 'Válvula V2', isOpen: true, flowRate: 8.3 },
+    },
+    {
+      id: 'pump-1',
+      type: 'pump',
+      position: { x: 350, y: 180 },
+      data: { label: 'Bomba P1', isRunning: true, rpm: 1450, power: 75 },
+    },
+    {
+      id: 'mixer-1',
+      type: 'mixer',
+      position: { x: 500, y: 150 },
+      data: { label: 'Mezclador M1', isRunning: true, speed: 120, temperature: 45 },
+    },
+    {
+      id: 'sensor-1',
+      type: 'sensor',
+      position: { x: 650, y: 80 },
+      data: { label: 'Sensor Temp', value: 45.2, unit: '°C', type: 'temperature', status: 'normal' },
+    },
+    {
+      id: 'sensor-2',
+      type: 'sensor',
+      position: { x: 650, y: 180 },
+      data: { label: 'Sensor Presión', value: 2.4, unit: 'bar', type: 'pressure', status: 'normal' },
+    },
+    {
+      id: 'sensor-3',
+      type: 'sensor',
+      position: { x: 650, y: 280 },
+      data: { label: 'Sensor Flujo', value: 18.7, unit: 'L/min', type: 'flow', status: 'warning' },
+    },
+    {
+      id: 'tank-3',
+      type: 'tank',
+      position: { x: 780, y: 130 },
+      data: getStorageData('tank-3') || { label: 'Tanque Salida', level: 30, temperature: 42, capacity: 1500, unit: 'L', status: 'active' },
+    },
+  ];
+};
 
 const allEdges: Edge[] = [
   { id: 'e1', source: 'tank-1', target: 'valve-1', animated: true, style: { stroke: 'hsl(var(--primary))' } },
@@ -137,6 +156,10 @@ interface ScadaFlowDiagramProps {
 }
 
 const ScadaFlowDiagram = ({ selectedView = 'planta-completa' }: ScadaFlowDiagramProps) => {
+  const { storageUnits } = useStorage();
+  
+  const allNodes = useMemo(() => createInitialNodes(storageUnits), [storageUnits]);
+
   const filteredData = useMemo(() => {
     let nodeIds: string[] = [];
 
