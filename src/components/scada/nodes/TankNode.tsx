@@ -8,6 +8,7 @@ interface TankNodeData {
   capacity: number;
   unit: string;
   status: 'active' | 'inactive' | 'warning' | 'error';
+  content?: string;
 }
 
 const TankNode = ({ data }: { data: TankNodeData }) => {
@@ -27,12 +28,17 @@ const TankNode = ({ data }: { data: TankNodeData }) => {
   };
 
   return (
-    <div className={`bg-card rounded-lg border-2 ${getStatusColor(data.status)} p-3 min-w-[140px] shadow-lg`}>
+    <div className={`bg-card rounded-lg border-2 ${getStatusColor(data.status)} p-3 min-w-[160px] shadow-lg`}>
       <Handle type="target" position={Position.Left} className="!bg-primary !w-3 !h-3" />
       
-      <div className="text-xs font-semibold text-foreground mb-2 text-center">
+      <div className="text-xs font-semibold text-foreground mb-1 text-center">
         {data.label}
       </div>
+      {data.content && (
+        <div className="text-[10px] text-primary mb-2 text-center font-medium">
+          {data.content}
+        </div>
+      )}
       
       {/* Tank visualization */}
       <div className="relative h-16 w-full bg-muted rounded border border-border overflow-hidden mb-2">
