@@ -18,6 +18,7 @@ import GestionPlantillas from "@/pages/GestionPlantillas";
 import ConfiguracionMQTT from "@/pages/ConfiguracionMQTT";
 import NotFound from "@/pages/NotFound";
 import Login from "@/pages/Login";
+import LandingPage from "@/pages/LandingPage";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,9 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Landing page is always accessible */}
+            <Route path="/" element={<LandingPage />} />
+            
             {!isAuthenticated ? (
               <>
                 <Route path="/login" element={<Login onLogin={handleLogin} />} />
@@ -47,7 +51,7 @@ const App = () => {
             ) : (
               <>
                 <Route element={<MainLayout onLogout={handleLogout} />}>
-                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/empleados" element={<GestionEmpleados />} />
                   <Route path="/plantas" element={<GestionPlantas />} />
                   <Route path="/sensores" element={<GestionSensores />} />
@@ -59,7 +63,7 @@ const App = () => {
                   <Route path="/auditoria" element={<Auditoria />} />
                   <Route path="/comunicacion" element={<ConfiguracionMQTT />} />
                 </Route>
-                <Route path="/login" element={<Navigate to="/" replace />} />
+                <Route path="/login" element={<Navigate to="/dashboard" replace />} />
                 <Route path="*" element={<NotFound />} />
               </>
             )}
