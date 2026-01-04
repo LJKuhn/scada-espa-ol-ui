@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Calendar, FileText, Plus, Clock, Target, Edit, Trash2, Search } from "lucide-react";
+import { Calendar, FileText, Plus, Clock, Target, Edit, Trash2, Search, Wrench } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,10 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import FormularioOrden from "@/components/FormularioOrden";
 import FormularioPlantilla from "@/components/FormularioPlantilla";
+import GanttChart, { GanttItem } from "@/components/GanttChart";
 
 interface OrdenProduccion {
   id: string;
@@ -38,6 +46,19 @@ interface OrdenProduccion {
   maquina: string;
   estado: "pendiente" | "en_proceso" | "completada";
   progreso: number;
+}
+
+interface Mantenimiento {
+  id: string;
+  nombre: string;
+  fechaInicio: string;
+  horaInicio: string;
+  fechaFin: string;
+  horaFin: string;
+  planta: string;
+  sistema: string;
+  maquina: string;
+  descripcion: string;
 }
 
 interface Plantilla {
@@ -55,12 +76,39 @@ const ordenesIniciales: OrdenProduccion[] = [
   { id: "ORD-004", producto: "Producto D-400", cantidad: 2500, fechaInicio: "2024-01-17", horaInicio: "10:00", fechaFin: "2024-01-17", horaFin: "13:00", planta: "Fábrica Este", sistema: "Módulo de Procesamiento", maquina: "Procesador PROC-01", estado: "pendiente", progreso: 0 },
 ];
 
+const mantenimientosIniciales: Mantenimiento[] = [
+  { id: "MNT-001", nombre: "Mantenimiento preventivo M-001", fechaInicio: "2024-01-15", horaInicio: "14:30", fechaFin: "2024-01-15", horaFin: "16:00", planta: "Planta Norte", sistema: "Sistema de Mezcla A", maquina: "Mezcladora M-001", descripcion: "Revisión programada de componentes" },
+  { id: "MNT-002", nombre: "Calibración sensores", fechaInicio: "2024-01-16", horaInicio: "07:00", fechaFin: "2024-01-16", horaFin: "09:00", planta: "Planta Central", sistema: "Línea de Producción 1", maquina: "Robot R-01", descripcion: "Calibración de sensores de posición" },
+];
+
 const plantillasIniciales: Plantilla[] = [
   { id: "REC-001", nombre: "Mezcla Estándar A", tipo: "Producción", ingredientes: "Componente A (45%), Componente B (30%), Aditivo X (25%)", tiempoEstimado: "2h 30m" },
   { id: "REC-002", nombre: "Fórmula Premium B", tipo: "Especialidad", ingredientes: "Base Premium (60%), Catalizador Y (20%), Estabilizador Z (20%)", tiempoEstimado: "3h 45m" },
   { id: "REC-003", nombre: "Receta Industrial C", tipo: "Producción", ingredientes: "Material Base (70%), Refuerzo R (15%), Aditivo Final (15%)", tiempoEstimado: "1h 15m" },
   { id: "REC-004", nombre: "Compuesto Especial D", tipo: "Especialidad", ingredientes: "Polímero P (50%), Agente A (25%), Modificador M (25%)", tiempoEstimado: "4h 00m" },
 ];
+
+const sistemasPorPlanta: Record<string, string[]> = {
+  "Planta Norte": ["Sistema de Mezcla A", "Sistema de Mezcla B", "Control de Calidad"],
+  "Planta Central": ["Línea de Producción 1", "Línea de Producción 2", "Almacenamiento"],
+  "Planta Sur": ["Sistema Automatizado", "Procesamiento", "Empaquetado"],
+  "Fábrica Este": ["Módulo de Procesamiento", "Sistema de Control", "Distribución"],
+};
+
+const maquinasPorSistema: Record<string, string[]> = {
+  "Sistema de Mezcla A": ["Mezcladora M-001", "Mezcladora M-002"],
+  "Sistema de Mezcla B": ["Mezcladora M-003", "Mezcladora M-004"],
+  "Control de Calidad": ["Analizador A-01", "Espectrómetro E-01"],
+  "Línea de Producción 1": ["Robot R-01", "Robot R-02", "Transportador T-01"],
+  "Línea de Producción 2": ["Robot R-03", "Robot R-04", "Transportador T-02"],
+  "Almacenamiento": ["Grúa G-01", "Elevador E-01"],
+  "Sistema Automatizado": ["Brazo Robótico BR-01", "Brazo Robótico BR-02"],
+  "Procesamiento": ["Procesador P-01", "Procesador P-02"],
+  "Empaquetado": ["Empaquetadora E-01", "Selladora S-01"],
+  "Módulo de Procesamiento": ["Procesador PROC-01", "Procesador PROC-02"],
+  "Sistema de Control": ["Controlador C-01", "Monitor M-01"],
+  "Distribución": ["Cinta D-01", "Clasificador CL-01"],
+};
 
 const getEstadoConfig = (estado: OrdenProduccion["estado"]) => {
   switch (estado) {
@@ -72,11 +120,26 @@ const getEstadoConfig = (estado: OrdenProduccion["estado"]) => {
 
 const PlanificacionProduccion = () => {
   const [ordenes, setOrdenes] = useState<OrdenProduccion[]>(ordenesIniciales);
+  const [mantenimientos, setMantenimientos] = useState<Mantenimiento[]>(mantenimientosIniciales);
   const [plantillas, setPlantillas] = useState<Plantilla[]>(plantillasIniciales);
   const [ordenDialogOpen, setOrdenDialogOpen] = useState(false);
   const [plantillaDialogOpen, setPlantillaDialogOpen] = useState(false);
+  const [mantenimientoDialogOpen, setMantenimientoDialogOpen] = useState(false);
   const [editingOrden, setEditingOrden] = useState<OrdenProduccion | null>(null);
   const [editingPlantilla, setEditingPlantilla] = useState<Plantilla | null>(null);
+
+  // Mantenimiento form state
+  const [mantenimientoForm, setMantenimientoForm] = useState({
+    nombre: "",
+    fechaInicio: "",
+    horaInicio: "",
+    fechaFin: "",
+    horaFin: "",
+    planta: "",
+    sistema: "",
+    maquina: "",
+    descripcion: "",
+  });
 
   // Filters for orders
   const [ordenSearch, setOrdenSearch] = useState("");
@@ -119,6 +182,38 @@ const PlanificacionProduccion = () => {
     );
   }, [plantillas, plantillaSearch]);
 
+  // Convert to Gantt items
+  const ganttItems: GanttItem[] = useMemo(() => {
+    const orderItems: GanttItem[] = ordenes.map((orden) => ({
+      id: orden.id,
+      nombre: orden.producto,
+      fechaInicio: orden.fechaInicio,
+      horaInicio: orden.horaInicio,
+      fechaFin: orden.fechaFin,
+      horaFin: orden.horaFin,
+      planta: orden.planta,
+      sistema: orden.sistema,
+      maquina: orden.maquina,
+      tipo: "produccion" as const,
+      estado: orden.estado,
+    }));
+
+    const mantItems: GanttItem[] = mantenimientos.map((mant) => ({
+      id: mant.id,
+      nombre: mant.nombre,
+      fechaInicio: mant.fechaInicio,
+      horaInicio: mant.horaInicio,
+      fechaFin: mant.fechaFin,
+      horaFin: mant.horaFin,
+      planta: mant.planta,
+      sistema: mant.sistema,
+      maquina: mant.maquina,
+      tipo: "mantenimiento" as const,
+    }));
+
+    return [...orderItems, ...mantItems];
+  }, [ordenes, mantenimientos]);
+
   const handleSaveOrden = (data: Omit<OrdenProduccion, "id">) => {
     if (editingOrden) {
       setOrdenes(ordenes.map((o) => o.id === editingOrden.id ? { ...o, ...data } : o));
@@ -157,6 +252,32 @@ const PlanificacionProduccion = () => {
   const handleDeletePlantilla = (id: string) => {
     setPlantillas(plantillas.filter((p) => p.id !== id));
     toast({ title: "Plantilla eliminada", description: "La plantilla ha sido eliminada del sistema" });
+  };
+
+  const handleSaveMantenimiento = () => {
+    if (!mantenimientoForm.nombre || !mantenimientoForm.fechaInicio || !mantenimientoForm.horaInicio) {
+      toast({ title: "Error", description: "Complete los campos obligatorios", variant: "destructive" });
+      return;
+    }
+
+    const newMant: Mantenimiento = {
+      id: `MNT-${String(mantenimientos.length + 1).padStart(3, "0")}`,
+      ...mantenimientoForm,
+    };
+    setMantenimientos([...mantenimientos, newMant]);
+    setMantenimientoDialogOpen(false);
+    setMantenimientoForm({
+      nombre: "",
+      fechaInicio: "",
+      horaInicio: "",
+      fechaFin: "",
+      horaFin: "",
+      planta: "",
+      sistema: "",
+      maquina: "",
+      descripcion: "",
+    });
+    toast({ title: "Mantenimiento programado", description: "El mantenimiento se ha añadido al calendario" });
   };
 
   return (
@@ -388,16 +509,11 @@ const PlanificacionProduccion = () => {
             </CardContent>
           </Card>
 
-          {/* Placeholder for planning tools */}
-          <Card className="bg-card border-border">
-            <CardContent className="p-8 text-center">
-              <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">Herramientas de Planificación a Largo Plazo</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                Aquí se integrarán herramientas avanzadas de planificación como calendarios de producción, análisis de capacidad y optimización de recursos.
-              </p>
-            </CardContent>
-          </Card>
+          {/* Gantt Chart */}
+          <GanttChart 
+            items={ganttItems} 
+            onAddMantenimiento={() => setMantenimientoDialogOpen(true)} 
+          />
         </TabsContent>
 
         {/* Plantillas Tab */}
@@ -482,6 +598,139 @@ const PlanificacionProduccion = () => {
         plantilla={editingPlantilla}
         onSave={handleSavePlantilla}
       />
+
+      {/* Mantenimiento Dialog */}
+      <Dialog open={mantenimientoDialogOpen} onOpenChange={setMantenimientoDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="h-5 w-5 text-orange-400" />
+              Programar Mantenimiento
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nombre del Mantenimiento *</Label>
+              <Input
+                value={mantenimientoForm.nombre}
+                onChange={(e) => setMantenimientoForm({ ...mantenimientoForm, nombre: e.target.value })}
+                placeholder="Ej: Mantenimiento preventivo bomba"
+                className="bg-background border-border"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Fecha Inicio *</Label>
+                <Input
+                  type="date"
+                  value={mantenimientoForm.fechaInicio}
+                  onChange={(e) => setMantenimientoForm({ ...mantenimientoForm, fechaInicio: e.target.value })}
+                  className="bg-background border-border"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Hora Inicio *</Label>
+                <Input
+                  type="time"
+                  value={mantenimientoForm.horaInicio}
+                  onChange={(e) => setMantenimientoForm({ ...mantenimientoForm, horaInicio: e.target.value })}
+                  className="bg-background border-border"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Fecha Fin</Label>
+                <Input
+                  type="date"
+                  value={mantenimientoForm.fechaFin}
+                  onChange={(e) => setMantenimientoForm({ ...mantenimientoForm, fechaFin: e.target.value })}
+                  className="bg-background border-border"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Hora Fin</Label>
+                <Input
+                  type="time"
+                  value={mantenimientoForm.horaFin}
+                  onChange={(e) => setMantenimientoForm({ ...mantenimientoForm, horaFin: e.target.value })}
+                  className="bg-background border-border"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Planta</Label>
+              <Select
+                value={mantenimientoForm.planta}
+                onValueChange={(v) => setMantenimientoForm({ ...mantenimientoForm, planta: v, sistema: "", maquina: "" })}
+              >
+                <SelectTrigger className="bg-background border-border">
+                  <SelectValue placeholder="Seleccionar planta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(sistemasPorPlanta).map((planta) => (
+                    <SelectItem key={planta} value={planta}>{planta}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {mantenimientoForm.planta && (
+              <div className="space-y-2">
+                <Label>Sistema</Label>
+                <Select
+                  value={mantenimientoForm.sistema}
+                  onValueChange={(v) => setMantenimientoForm({ ...mantenimientoForm, sistema: v, maquina: "" })}
+                >
+                  <SelectTrigger className="bg-background border-border">
+                    <SelectValue placeholder="Seleccionar sistema" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sistemasPorPlanta[mantenimientoForm.planta]?.map((sistema) => (
+                      <SelectItem key={sistema} value={sistema}>{sistema}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {mantenimientoForm.sistema && (
+              <div className="space-y-2">
+                <Label>Máquina</Label>
+                <Select
+                  value={mantenimientoForm.maquina}
+                  onValueChange={(v) => setMantenimientoForm({ ...mantenimientoForm, maquina: v })}
+                >
+                  <SelectTrigger className="bg-background border-border">
+                    <SelectValue placeholder="Seleccionar máquina" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {maquinasPorSistema[mantenimientoForm.sistema]?.map((maquina) => (
+                      <SelectItem key={maquina} value={maquina}>{maquina}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Descripción</Label>
+              <Input
+                value={mantenimientoForm.descripcion}
+                onChange={(e) => setMantenimientoForm({ ...mantenimientoForm, descripcion: e.target.value })}
+                placeholder="Descripción del mantenimiento..."
+                className="bg-background border-border"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setMantenimientoDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveMantenimiento} className="bg-orange-500 hover:bg-orange-600">
+                <Wrench className="h-4 w-4 mr-2" />
+                Programar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
