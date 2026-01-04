@@ -30,8 +30,12 @@ interface OrdenProduccion {
   producto: string;
   cantidad: number;
   fechaInicio: string;
+  horaInicio: string;
   fechaFin: string;
+  horaFin: string;
   planta: string;
+  sistema: string;
+  maquina: string;
   estado: "pendiente" | "en_proceso" | "completada";
   progreso: number;
 }
@@ -45,10 +49,10 @@ interface Plantilla {
 }
 
 const ordenesIniciales: OrdenProduccion[] = [
-  { id: "ORD-001", producto: "Producto A-100", cantidad: 5000, fechaInicio: "2024-01-15", fechaFin: "2024-01-18", planta: "Planta Norte", estado: "en_proceso", progreso: 65 },
-  { id: "ORD-002", producto: "Producto B-200", cantidad: 3000, fechaInicio: "2024-01-16", fechaFin: "2024-01-19", planta: "Planta Central", estado: "pendiente", progreso: 0 },
-  { id: "ORD-003", producto: "Producto C-300", cantidad: 8000, fechaInicio: "2024-01-14", fechaFin: "2024-01-16", planta: "Planta Sur", estado: "completada", progreso: 100 },
-  { id: "ORD-004", producto: "Producto D-400", cantidad: 2500, fechaInicio: "2024-01-17", fechaFin: "2024-01-20", planta: "Fábrica Este", estado: "pendiente", progreso: 0 },
+  { id: "ORD-001", producto: "Producto A-100", cantidad: 5000, fechaInicio: "2024-01-15", horaInicio: "08:00", fechaFin: "2024-01-15", horaFin: "14:00", planta: "Planta Norte", sistema: "Sistema de Mezcla A", maquina: "Mezcladora M-001", estado: "en_proceso", progreso: 65 },
+  { id: "ORD-002", producto: "Producto B-200", cantidad: 3000, fechaInicio: "2024-01-16", horaInicio: "09:30", fechaFin: "2024-01-16", horaFin: "15:30", planta: "Planta Central", sistema: "Línea de Producción 1", maquina: "Robot R-01", estado: "pendiente", progreso: 0 },
+  { id: "ORD-003", producto: "Producto C-300", cantidad: 8000, fechaInicio: "2024-01-14", horaInicio: "07:00", fechaFin: "2024-01-14", horaFin: "19:00", planta: "Planta Sur", sistema: "Sistema Automatizado", maquina: "Brazo Robótico BR-01", estado: "completada", progreso: 100 },
+  { id: "ORD-004", producto: "Producto D-400", cantidad: 2500, fechaInicio: "2024-01-17", horaInicio: "10:00", fechaFin: "2024-01-17", horaFin: "13:00", planta: "Fábrica Este", sistema: "Módulo de Procesamiento", maquina: "Procesador PROC-01", estado: "pendiente", progreso: 0 },
 ];
 
 const plantillasIniciales: Plantilla[] = [
@@ -79,6 +83,8 @@ const PlanificacionProduccion = () => {
   const [ordenEstadoFilter, setOrdenEstadoFilter] = useState<string>("todos");
   const [ordenFechaInicio, setOrdenFechaInicio] = useState("");
   const [ordenFechaFin, setOrdenFechaFin] = useState("");
+  const [ordenHoraInicio, setOrdenHoraInicio] = useState("");
+  const [ordenHoraFin, setOrdenHoraFin] = useState("");
 
   // Search for templates
   const [plantillaSearch, setPlantillaSearch] = useState("");
@@ -87,7 +93,9 @@ const PlanificacionProduccion = () => {
     return ordenes.filter((orden) => {
       const matchesSearch = orden.producto.toLowerCase().includes(ordenSearch.toLowerCase()) ||
                            orden.planta.toLowerCase().includes(ordenSearch.toLowerCase()) ||
-                           orden.id.toLowerCase().includes(ordenSearch.toLowerCase());
+                           orden.id.toLowerCase().includes(ordenSearch.toLowerCase()) ||
+                           (orden.sistema && orden.sistema.toLowerCase().includes(ordenSearch.toLowerCase())) ||
+                           (orden.maquina && orden.maquina.toLowerCase().includes(ordenSearch.toLowerCase()));
       const matchesEstado = ordenEstadoFilter === "todos" || orden.estado === ordenEstadoFilter;
       
       // Date range filter
@@ -95,9 +103,13 @@ const PlanificacionProduccion = () => {
       const matchesFechaInicio = !ordenFechaInicio || ordenDate >= new Date(ordenFechaInicio);
       const matchesFechaFin = !ordenFechaFin || ordenDate <= new Date(ordenFechaFin);
       
-      return matchesSearch && matchesEstado && matchesFechaInicio && matchesFechaFin;
+      // Time range filter
+      const matchesHoraInicio = !ordenHoraInicio || orden.horaInicio >= ordenHoraInicio;
+      const matchesHoraFin = !ordenHoraFin || orden.horaFin <= ordenHoraFin;
+      
+      return matchesSearch && matchesEstado && matchesFechaInicio && matchesFechaFin && matchesHoraInicio && matchesHoraFin;
     });
-  }, [ordenes, ordenSearch, ordenEstadoFilter, ordenFechaInicio, ordenFechaFin]);
+  }, [ordenes, ordenSearch, ordenEstadoFilter, ordenFechaInicio, ordenFechaFin, ordenHoraInicio, ordenHoraFin]);
 
   const plantillasFiltradas = useMemo(() => {
     return plantillas.filter((plantilla) =>
@@ -260,7 +272,7 @@ const PlanificacionProduccion = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                <div className="flex flex-wrap gap-4 items-start sm:items-center">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Desde:</span>
                     <Input
@@ -279,9 +291,29 @@ const PlanificacionProduccion = () => {
                       className="w-auto bg-background border-border"
                     />
                   </div>
-                  {(ordenFechaInicio || ordenFechaFin) && (
-                    <Button variant="ghost" size="sm" onClick={() => { setOrdenFechaInicio(""); setOrdenFechaFin(""); }}>
-                      Limpiar fechas
+                </div>
+                <div className="flex flex-wrap gap-4 items-start sm:items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Hora desde:</span>
+                    <Input
+                      type="time"
+                      value={ordenHoraInicio}
+                      onChange={(e) => setOrdenHoraInicio(e.target.value)}
+                      className="w-auto bg-background border-border"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Hora hasta:</span>
+                    <Input
+                      type="time"
+                      value={ordenHoraFin}
+                      onChange={(e) => setOrdenHoraFin(e.target.value)}
+                      className="w-auto bg-background border-border"
+                    />
+                  </div>
+                  {(ordenFechaInicio || ordenFechaFin || ordenHoraInicio || ordenHoraFin) && (
+                    <Button variant="ghost" size="sm" onClick={() => { setOrdenFechaInicio(""); setOrdenFechaFin(""); setOrdenHoraInicio(""); setOrdenHoraFin(""); }}>
+                      Limpiar filtros
                     </Button>
                   )}
                 </div>
@@ -294,9 +326,9 @@ const PlanificacionProduccion = () => {
                       <TableHead className="text-muted-foreground">ID</TableHead>
                       <TableHead className="text-muted-foreground">Producto</TableHead>
                       <TableHead className="text-muted-foreground">Cantidad</TableHead>
-                      <TableHead className="text-muted-foreground">Planta</TableHead>
-                      <TableHead className="text-muted-foreground">Fecha Inicio</TableHead>
-                      <TableHead className="text-muted-foreground">Fecha Fin</TableHead>
+                      <TableHead className="text-muted-foreground">Ubicación</TableHead>
+                      <TableHead className="text-muted-foreground">Inicio</TableHead>
+                      <TableHead className="text-muted-foreground">Fin</TableHead>
                       <TableHead className="text-muted-foreground">Estado</TableHead>
                       <TableHead className="text-muted-foreground">Progreso</TableHead>
                       <TableHead className="text-muted-foreground">Acciones</TableHead>
@@ -308,9 +340,25 @@ const PlanificacionProduccion = () => {
                         <TableCell className="font-mono text-foreground">{orden.id}</TableCell>
                         <TableCell className="text-foreground font-medium">{orden.producto}</TableCell>
                         <TableCell className="text-foreground">{orden.cantidad.toLocaleString()} uds</TableCell>
-                        <TableCell className="text-foreground">{orden.planta}</TableCell>
-                        <TableCell className="text-muted-foreground">{new Date(orden.fechaInicio).toLocaleDateString("es-ES")}</TableCell>
-                        <TableCell className="text-muted-foreground">{new Date(orden.fechaFin).toLocaleDateString("es-ES")}</TableCell>
+                        <TableCell className="text-foreground">
+                          <div className="text-sm">
+                            <div>{orden.planta}</div>
+                            {orden.sistema && <div className="text-xs text-muted-foreground">{orden.sistema}</div>}
+                            {orden.maquina && <div className="text-xs text-muted-foreground">{orden.maquina}</div>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          <div className="text-sm">
+                            <div>{new Date(orden.fechaInicio).toLocaleDateString("es-ES")}</div>
+                            <div className="text-xs">{orden.horaInicio}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          <div className="text-sm">
+                            <div>{new Date(orden.fechaFin).toLocaleDateString("es-ES")}</div>
+                            <div className="text-xs">{orden.horaFin}</div>
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={getEstadoConfig(orden.estado).className}>
                             {getEstadoConfig(orden.estado).label}
