@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Wrench } from "lucide-react";
+import { ChevronLeft, ChevronRight, Wrench, GripVertical } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -16,6 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { toast } from "@/hooks/use-toast";
 
 export interface GanttItem {
   id: string;
@@ -36,6 +37,7 @@ type PeriodView = "diario" | "semanal" | "mensual";
 interface GanttChartProps {
   items: GanttItem[];
   onAddMantenimiento?: () => void;
+  onItemUpdate?: (item: GanttItem) => void;
 }
 
 const tipoColors: Record<string, { bg: string; border: string; text: string }> = {
@@ -57,9 +59,12 @@ const estadoColors: Record<string, { bg: string; border: string }> = {
   completada: { bg: "bg-success/30", border: "border-success/50" },
 };
 
-const GanttChart = ({ items, onAddMantenimiento }: GanttChartProps) => {
+const GanttChart = ({ items, onAddMantenimiento, onItemUpdate }: GanttChartProps) => {
   const [periodView, setPeriodView] = useState<PeriodView>("diario");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [draggingItem, setDraggingItem] = useState<GanttItem | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, startX: 0 });
+  const chartRef = useRef<HTMLDivElement>(null);
 
   // Get time slots based on period view
   const timeSlots = useMemo(() => {
@@ -181,6 +186,123 @@ const GanttChart = ({ items, onAddMantenimiento }: GanttChartProps) => {
     return groups;
   }, [items]);
 
+  // Drag handlers
+  const handleDragStart = useCallback((e: React.MouseEvent, item: GanttItem, barElement: HTMLDivElement) => {
+    e.preventDefault();
+    setDraggingItem(item);
+    const rect = barElement.getBoundingClientRect();
+    setDragOffset({ x: e.clientX - rect.left, startX: rect.left });
+  }, []);
+
+  const handleDragMove = useCallback((e: React.MouseEvent) => {
+    if (!draggingItem || !chartRef.current) return;
+    
+    const chartRect = chartRef.current.getBoundingClientRect();
+    const resourceWidth = 192; // w-48 = 12rem = 192px
+    const chartWidth = chartRect.width - resourceWidth;
+    const newX = e.clientX - chartRect.left - resourceWidth - dragOffset.x;
+    const percentage = Math.max(0, Math.min(100, (newX / chartWidth) * 100));
+    
+    // Update visual position of dragging element
+    const draggingElements = document.querySelectorAll(`[data-item-id="${draggingItem.id}"]`);
+    draggingElements.forEach((el) => {
+      const htmlEl = el as HTMLElement;
+      const width = parseFloat(htmlEl.style.width);
+      htmlEl.style.left = `${Math.min(percentage, 100 - width)}%`;
+    });
+  }, [draggingItem, dragOffset]);
+
+  const handleDragEnd = useCallback((e: React.MouseEvent) => {
+    if (!draggingItem || !chartRef.current || !onItemUpdate) {
+      setDraggingItem(null);
+      return;
+    }
+
+    const chartRect = chartRef.current.getBoundingClientRect();
+    const resourceWidth = 192;
+    const chartWidth = chartRect.width - resourceWidth;
+    const newX = e.clientX - chartRect.left - resourceWidth - dragOffset.x;
+    const percentage = Math.max(0, Math.min(100, (newX / chartWidth) * 100));
+
+    // Calculate new dates based on percentage and period view
+    let newFechaInicio: string;
+    let newHoraInicio: string;
+    let newFechaFin: string;
+    let newHoraFin: string;
+
+    // Calculate duration of original item
+    const originalStart = new Date(`${draggingItem.fechaInicio}T${draggingItem.horaInicio}`);
+    const originalEnd = new Date(`${draggingItem.fechaFin}T${draggingItem.horaFin}`);
+    const durationMs = originalEnd.getTime() - originalStart.getTime();
+
+    if (periodView === "diario") {
+      // Percentage maps to hours (0-24)
+      const newStartHour = (percentage / 100) * 24;
+      const hours = Math.floor(newStartHour);
+      const minutes = Math.round((newStartHour - hours) * 60);
+      
+      newFechaInicio = currentDate.toISOString().split("T")[0];
+      newHoraInicio = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+      
+      const endTime = new Date(`${newFechaInicio}T${newHoraInicio}`);
+      endTime.setTime(endTime.getTime() + durationMs);
+      newFechaFin = endTime.toISOString().split("T")[0];
+      newHoraFin = `${endTime.getHours().toString().padStart(2, "0")}:${endTime.getMinutes().toString().padStart(2, "0")}`;
+    } else if (periodView === "semanal") {
+      const startOfWeek = new Date(currentDate);
+      const day = startOfWeek.getDay();
+      const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+      startOfWeek.setDate(diff);
+      startOfWeek.setHours(0, 0, 0, 0);
+      
+      const weekMs = 7 * 24 * 60 * 60 * 1000;
+      const newStartMs = startOfWeek.getTime() + (percentage / 100) * weekMs;
+      const newStart = new Date(newStartMs);
+      
+      newFechaInicio = newStart.toISOString().split("T")[0];
+      newHoraInicio = `${newStart.getHours().toString().padStart(2, "0")}:${newStart.getMinutes().toString().padStart(2, "0")}`;
+      
+      const endTime = new Date(newStartMs + durationMs);
+      newFechaFin = endTime.toISOString().split("T")[0];
+      newHoraFin = `${endTime.getHours().toString().padStart(2, "0")}:${endTime.getMinutes().toString().padStart(2, "0")}`;
+    } else {
+      // Monthly
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      
+      const newDay = 1 + (percentage / 100) * (daysInMonth - 1);
+      const dayInt = Math.floor(newDay);
+      const dayFraction = newDay - dayInt;
+      const hours = Math.floor(dayFraction * 24);
+      const minutes = Math.round((dayFraction * 24 - hours) * 60);
+      
+      newFechaInicio = `${year}-${(month + 1).toString().padStart(2, "0")}-${dayInt.toString().padStart(2, "0")}`;
+      newHoraInicio = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+      
+      const endTime = new Date(`${newFechaInicio}T${newHoraInicio}`);
+      endTime.setTime(endTime.getTime() + durationMs);
+      newFechaFin = endTime.toISOString().split("T")[0];
+      newHoraFin = `${endTime.getHours().toString().padStart(2, "0")}:${endTime.getMinutes().toString().padStart(2, "0")}`;
+    }
+
+    const updatedItem: GanttItem = {
+      ...draggingItem,
+      fechaInicio: newFechaInicio,
+      horaInicio: newHoraInicio,
+      fechaFin: newFechaFin,
+      horaFin: newHoraFin,
+    };
+
+    onItemUpdate(updatedItem);
+    toast({
+      title: "Evento reprogramado",
+      description: `${updatedItem.nombre} movido a ${newFechaInicio} ${newHoraInicio}`,
+    });
+
+    setDraggingItem(null);
+  }, [draggingItem, dragOffset, periodView, currentDate, onItemUpdate]);
+
   const navigate = (direction: number) => {
     const newDate = new Date(currentDate);
     if (periodView === "diario") {
@@ -273,7 +395,13 @@ const GanttChart = ({ items, onAddMantenimiento }: GanttChartProps) => {
         </div>
 
         {/* Gantt chart */}
-        <div className="border border-border rounded-lg overflow-hidden">
+        <div 
+          ref={chartRef}
+          className={`border border-border rounded-lg overflow-hidden ${draggingItem ? 'select-none' : ''}`}
+          onMouseMove={draggingItem ? handleDragMove : undefined}
+          onMouseUp={draggingItem ? handleDragEnd : undefined}
+          onMouseLeave={draggingItem ? handleDragEnd : undefined}
+        >
           {/* Time header */}
           <div className="flex bg-muted/30">
             <div className="w-48 flex-shrink-0 px-3 py-2 border-r border-border">
@@ -328,11 +456,28 @@ const GanttChart = ({ items, onAddMantenimiento }: GanttChartProps) => {
                         <Tooltip key={item.id}>
                           <TooltipTrigger asChild>
                             <div
-                              className={`absolute top-1 bottom-1 rounded ${colorConfig.bg} ${colorConfig.border} border cursor-pointer hover:opacity-80 transition-opacity flex items-center justify-center overflow-hidden`}
+                              data-item-id={item.id}
+                              className={`
+                                absolute top-1 bottom-1 rounded border flex items-center overflow-hidden
+                                ${colorConfig.bg} ${colorConfig.border}
+                                ${onItemUpdate ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}
+                                ${draggingItem?.id === item.id ? 'opacity-70 ring-2 ring-primary z-10' : 'hover:opacity-80'}
+                                transition-opacity
+                              `}
                               style={{ left: position.left, width: position.width }}
+                              onMouseDown={(e) => {
+                                if (onItemUpdate) {
+                                  handleDragStart(e, item, e.currentTarget as HTMLDivElement);
+                                }
+                              }}
                             >
+                              {onItemUpdate && (
+                                <div className="flex-shrink-0 px-0.5 opacity-50 hover:opacity-100">
+                                  <GripVertical className="h-3 w-3 text-muted-foreground" />
+                                </div>
+                              )}
                               {estadoConfig && (
-                                <div className={`absolute left-1 w-2 h-2 rounded-full ${estadoConfig.bg}`} />
+                                <div className={`absolute ${onItemUpdate ? 'left-4' : 'left-1'} w-2 h-2 rounded-full ${estadoConfig.bg}`} />
                               )}
                               <span className={`text-xs ${colorConfig.text} truncate px-2 font-medium`}>
                                 {item.nombre}
@@ -355,6 +500,11 @@ const GanttChart = ({ items, onAddMantenimiento }: GanttChartProps) => {
                                   </Badge>
                                 )}
                               </div>
+                              {onItemUpdate && (
+                                <p className="text-xs text-muted-foreground italic pt-1">
+                                  Arrastra para reprogramar
+                                </p>
+                              )}
                             </div>
                           </TooltipContent>
                         </Tooltip>

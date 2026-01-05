@@ -574,7 +574,34 @@ const PlanificacionProduccion = () => {
           {vistaProduccion === "gantt" ? (
             <GanttChart 
               items={ganttItems} 
-              onAddMantenimiento={() => setMantenimientoDialogOpen(true)} 
+              onAddMantenimiento={() => setMantenimientoDialogOpen(true)}
+              onItemUpdate={(updatedItem) => {
+                if (updatedItem.tipo === "produccion") {
+                  setOrdenes(ordenes.map((o) => 
+                    o.id === updatedItem.id 
+                      ? { 
+                          ...o, 
+                          fechaInicio: updatedItem.fechaInicio,
+                          horaInicio: updatedItem.horaInicio,
+                          fechaFin: updatedItem.fechaFin,
+                          horaFin: updatedItem.horaFin,
+                        } 
+                      : o
+                  ));
+                } else {
+                  setMantenimientos(mantenimientos.map((m) => 
+                    m.id === updatedItem.id 
+                      ? { 
+                          ...m, 
+                          fechaInicio: updatedItem.fechaInicio,
+                          horaInicio: updatedItem.horaInicio,
+                          fechaFin: updatedItem.fechaFin,
+                          horaFin: updatedItem.horaFin,
+                        } 
+                      : m
+                  ));
+                }
+              }}
             />
           ) : (
             <CalendarioMensual 
