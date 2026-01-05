@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Calendar, FileText, Plus, Clock, Target, Edit, Trash2, Search, Wrench } from "lucide-react";
+import { Calendar, FileText, Plus, Clock, Target, Edit, Trash2, Search, Wrench, CalendarDays, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ import { toast } from "@/hooks/use-toast";
 import FormularioOrden from "@/components/FormularioOrden";
 import FormularioPlantilla from "@/components/FormularioPlantilla";
 import GanttChart, { GanttItem } from "@/components/GanttChart";
+import CalendarioMensual, { CalendarEvent } from "@/components/CalendarioMensual";
 
 interface OrdenProduccion {
   id: string;
@@ -152,6 +153,9 @@ const PlanificacionProduccion = () => {
   // Search for templates
   const [plantillaSearch, setPlantillaSearch] = useState("");
 
+  // View mode for production planning
+  const [vistaProduccion, setVistaProduccion] = useState<"gantt" | "calendario">("gantt");
+
   const ordenesFiltradas = useMemo(() => {
     return ordenes.filter((orden) => {
       const matchesSearch = orden.producto.toLowerCase().includes(ordenSearch.toLowerCase()) ||
@@ -212,6 +216,38 @@ const PlanificacionProduccion = () => {
     }));
 
     return [...orderItems, ...mantItems];
+  }, [ordenes, mantenimientos]);
+
+  // Convert to calendar events
+  const calendarEvents: CalendarEvent[] = useMemo(() => {
+    const orderEvents: CalendarEvent[] = ordenes.map((orden) => ({
+      id: orden.id,
+      nombre: orden.producto,
+      fechaInicio: orden.fechaInicio,
+      horaInicio: orden.horaInicio,
+      fechaFin: orden.fechaFin,
+      horaFin: orden.horaFin,
+      planta: orden.planta,
+      sistema: orden.sistema,
+      maquina: orden.maquina,
+      tipo: "produccion" as const,
+      estado: orden.estado,
+    }));
+
+    const mantEvents: CalendarEvent[] = mantenimientos.map((mant) => ({
+      id: mant.id,
+      nombre: mant.nombre,
+      fechaInicio: mant.fechaInicio,
+      horaInicio: mant.horaInicio,
+      fechaFin: mant.fechaFin,
+      horaFin: mant.horaFin,
+      planta: mant.planta,
+      sistema: mant.sistema,
+      maquina: mant.maquina,
+      tipo: "mantenimiento" as const,
+    }));
+
+    return [...orderEvents, ...mantEvents];
   }, [ordenes, mantenimientos]);
 
   const handleSaveOrden = (data: Omit<OrdenProduccion, "id">) => {
@@ -509,11 +545,51 @@ const PlanificacionProduccion = () => {
             </CardContent>
           </Card>
 
-          {/* Gantt Chart */}
-          <GanttChart 
-            items={ganttItems} 
-            onAddMantenimiento={() => setMantenimientoDialogOpen(true)} 
-          />
+          {/* View Toggle */}
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-sm text-muted-foreground">Vista:</span>
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              <Button
+                variant={vistaProduccion === "gantt" ? "default" : "ghost"}
+                size="sm"
+                className="rounded-none gap-2"
+                onClick={() => setVistaProduccion("gantt")}
+              >
+                <BarChart3 className="h-4 w-4" />
+                Gantt
+              </Button>
+              <Button
+                variant={vistaProduccion === "calendario" ? "default" : "ghost"}
+                size="sm"
+                className="rounded-none gap-2"
+                onClick={() => setVistaProduccion("calendario")}
+              >
+                <CalendarDays className="h-4 w-4" />
+                Calendario
+              </Button>
+            </div>
+          </div>
+
+          {/* Gantt Chart or Calendar */}
+          {vistaProduccion === "gantt" ? (
+            <GanttChart 
+              items={ganttItems} 
+              onAddMantenimiento={() => setMantenimientoDialogOpen(true)} 
+            />
+          ) : (
+            <CalendarioMensual 
+              eventos={calendarEvents}
+              onEventClick={(evento) => {
+                if (evento.tipo === "produccion") {
+                  const orden = ordenes.find((o) => o.id === evento.id);
+                  if (orden) {
+                    setEditingOrden(orden);
+                    setOrdenDialogOpen(true);
+                  }
+                }
+              }}
+            />
+          )}
         </TabsContent>
 
         {/* Plantillas Tab */}
