@@ -14,60 +14,73 @@ import {
   ChevronDown,
   Wifi,
   Database,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const menuGroups = [
-  {
-    title: "Principal",
-    items: [
-      { title: "Dashboard", icon: LayoutDashboard, path: "/" },
-    ],
-  },
-  {
-    title: "Gestión Central",
-    items: [
-      { title: "Gestión de Empleados", icon: Users, path: "/empleados" },
-      { title: "Gestión de Plantas y Fábricas", icon: Factory, path: "/plantas" },
-      { title: "Gestión de Sensores y Máquinas", icon: Cpu, path: "/sensores" },
-      { title: "Administración de Almacenamiento", icon: Database, path: "/almacenamiento" },
-    ],
-  },
-  {
-    title: "Producción y Control",
-    collapsible: true,
-    items: [
-      { title: "Planificación de la Producción", icon: Calendar, path: "/planificacion" },
-      { title: "Gestión de Plantillas (Recetas)", icon: FileText, path: "/plantillas" },
-    ],
-  },
-  {
-    title: "Monitoreo y Auditoría",
-    items: [
-      { title: "Monitorización de Plantas", icon: Monitor, path: "/monitorizacion" },
-      { title: "Visualización SCADA", icon: Activity, path: "/scada" },
-      { title: "Gestión de Alarmas y Notificaciones", icon: Bell, path: "/alarmas" },
-      { title: "Auditoría y Registro de Actividades", icon: ClipboardList, path: "/auditoria" },
-    ],
-  },
-  {
-    title: "Comunicación",
-    items: [
-      { title: "Configuración MQTT", icon: Wifi, path: "/comunicacion" },
-    ],
-  },
-];
-
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const [openGroups, setOpenGroups] = useState<string[]>(["Producción y Control"]);
+  const { isAdmin } = useAuth();
+
+  const menuGroups = [
+    {
+      title: "Principal",
+      items: [
+        { title: "Dashboard", icon: LayoutDashboard, path: "/" },
+      ],
+    },
+    {
+      title: "Gestión Central",
+      items: [
+        { title: "Gestión de Empleados", icon: Users, path: "/empleados" },
+        { title: "Gestión de Plantas y Fábricas", icon: Factory, path: "/plantas" },
+        { title: "Gestión de Sensores y Máquinas", icon: Cpu, path: "/sensores" },
+        { title: "Administración de Almacenamiento", icon: Database, path: "/almacenamiento" },
+      ],
+    },
+    {
+      title: "Producción y Control",
+      collapsible: true,
+      items: [
+        { title: "Planificación de la Producción", icon: Calendar, path: "/planificacion" },
+        { title: "Gestión de Plantillas (Recetas)", icon: FileText, path: "/plantillas" },
+      ],
+    },
+    {
+      title: "Monitoreo y Auditoría",
+      items: [
+        { title: "Monitorización de Plantas", icon: Monitor, path: "/monitorizacion" },
+        { title: "Visualización SCADA", icon: Activity, path: "/scada" },
+        { title: "Gestión de Alarmas y Notificaciones", icon: Bell, path: "/alarmas" },
+        { title: "Auditoría y Registro de Actividades", icon: ClipboardList, path: "/auditoria" },
+      ],
+    },
+    {
+      title: "Comunicación",
+      items: [
+        { title: "Configuración MQTT", icon: Wifi, path: "/comunicacion" },
+      ],
+    },
+    ...(isAdmin
+      ? [
+          {
+            title: "Administración",
+            items: [
+              { title: "Panel de Control de Admin", icon: ShieldCheck, path: "/admin" },
+            ],
+          },
+        ]
+      : []),
+  ];
 
   const toggleGroup = (title: string) => {
     setOpenGroups((prev) =>
@@ -77,7 +90,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
   return (
     <>
-      {/* Overlay for mobile */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
@@ -85,7 +97,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
           "fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-72 bg-sidebar border-r border-sidebar-border transition-transform duration-300 ease-in-out lg:translate-x-0",
@@ -93,20 +104,13 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         )}
       >
         <div className="flex flex-col h-full">
-          {/* Close button for mobile */}
           <div className="flex items-center justify-between p-4 lg:hidden">
             <span className="text-sm font-medium text-sidebar-foreground">Navegación</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="text-sidebar-foreground"
-            >
+            <Button variant="ghost" size="icon" onClick={onClose} className="text-sidebar-foreground">
               <ChevronLeft className="h-5 w-5" />
             </Button>
           </div>
 
-          {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-4">
             {menuGroups.map((group) => (
               <div key={group.title} className="mb-4">
@@ -130,9 +134,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                           <li key={item.path}>
                             <NavLink
                               to={item.path}
-                              onClick={() => {
-                                if (window.innerWidth < 1024) onClose();
-                              }}
+                              onClick={() => { if (window.innerWidth < 1024) onClose(); }}
                               className={({ isActive }) =>
                                 cn(
                                   "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200",
@@ -160,9 +162,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                         <li key={item.path}>
                           <NavLink
                             to={item.path}
-                            onClick={() => {
-                              if (window.innerWidth < 1024) onClose();
-                            }}
+                            onClick={() => { if (window.innerWidth < 1024) onClose(); }}
                             className={({ isActive }) =>
                               cn(
                                 "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200",
@@ -184,7 +184,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             ))}
           </nav>
 
-          {/* System Status Footer */}
           <div className="p-4 border-t border-sidebar-border">
             <div className="scada-panel p-3">
               <div className="flex items-center gap-2 mb-2">

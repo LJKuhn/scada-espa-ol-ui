@@ -34,6 +34,7 @@ interface TablaGestionProps<T extends { id: string | number }> {
   addButtonLabel?: string;
   title?: string;
   subtitle?: string;
+  extraActions?: (item: T) => React.ReactNode;
 }
 
 const TablaGestion = <T extends { id: string | number }>({
@@ -46,6 +47,7 @@ const TablaGestion = <T extends { id: string | number }>({
   addButtonLabel = "Añadir Nuevo",
   title,
   subtitle,
+  extraActions,
 }: TablaGestionProps<T>) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -176,6 +178,8 @@ const TablaGestion = <T extends { id: string | number }>({
                         </TooltipTrigger>
                         <TooltipContent>Eliminar</TooltipContent>
                       </Tooltip>
+
+                      {extraActions && extraActions(item)}
                     </div>
                   </TableCell>
                 </TableRow>

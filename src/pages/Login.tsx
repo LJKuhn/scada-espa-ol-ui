@@ -6,31 +6,40 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Activity, Lock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth, RolUsuario } from "@/contexts/AuthContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-interface LoginProps {
-  onLogin: () => void;
-}
-
-const Login = ({ onLogin }: LoginProps) => {
+const Login = () => {
   const [usuario, setUsuario] = useState("");
   const [contrasena, setContrasena] = useState("");
+  const [rol, setRol] = useState<RolUsuario>("Operador");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Placeholder authentication logic
     setTimeout(() => {
       if (usuario && contrasena) {
-        onLogin();
+        login({
+          id: `USR-${Date.now()}`,
+          nombre: usuario,
+          rol,
+        });
         toast({
           title: "Bienvenido",
-          description: "Sesión iniciada correctamente",
+          description: `Sesión iniciada como ${rol}`,
         });
-        navigate("/");
+        navigate("/dashboard");
       } else {
         toast({
           title: "Error de autenticación",
@@ -44,15 +53,11 @@ const Login = ({ onLogin }: LoginProps) => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      {/* Background pattern */}
       <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-      
-      {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />
 
       <Card className="w-full max-w-md relative z-10 border-border/50 bg-card/95 backdrop-blur-sm shadow-2xl">
         <CardHeader className="text-center space-y-4 pb-2">
-          {/* Logo/System Name */}
           <div className="flex flex-col items-center gap-3">
             <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
               <Activity className="h-10 w-10 text-primary" />
@@ -71,9 +76,7 @@ const Login = ({ onLogin }: LoginProps) => {
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="usuario" className="text-sm font-medium text-foreground">
-                Usuario
-              </Label>
+              <Label htmlFor="usuario" className="text-sm font-medium text-foreground">Usuario</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -88,9 +91,7 @@ const Login = ({ onLogin }: LoginProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="contrasena" className="text-sm font-medium text-foreground">
-                Contraseña
-              </Label>
+              <Label htmlFor="contrasena" className="text-sm font-medium text-foreground">Contraseña</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -102,6 +103,20 @@ const Login = ({ onLogin }: LoginProps) => {
                   className="pl-10 bg-background/50 border-border/50 focus:border-primary"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="rol" className="text-sm font-medium text-foreground">Rol</Label>
+              <Select value={rol} onValueChange={(v) => setRol(v as RolUsuario)}>
+                <SelectTrigger className="bg-background/50 border-border/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Operador">Operador</SelectItem>
+                  <SelectItem value="Jefe de Sector">Jefe de Sector</SelectItem>
+                  <SelectItem value="Administrador">Administrador</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Button
