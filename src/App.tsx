@@ -22,6 +22,7 @@ import Login from "@/pages/Login";
 import LandingPage from "@/pages/LandingPage";
 import { StorageProvider } from "@/contexts/StorageContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { NotificationsProvider } from "@/contexts/NotificationsContext";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <NotificationsProvider>
         <StorageProvider>
           <TooltipProvider>
             <Toaster />
@@ -75,6 +77,7 @@ const App = () => {
             </BrowserRouter>
           </TooltipProvider>
         </StorageProvider>
+        </NotificationsProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
