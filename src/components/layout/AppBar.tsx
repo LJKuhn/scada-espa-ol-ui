@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { Menu, Bell, Settings, User } from "lucide-react";
+import { Menu, Bell, Settings, User, CheckCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import PerfilDialog from "@/components/PerfilDialog";
 import ConfiguracionDialog from "@/components/ConfiguracionDialog";
+import { useNotifications } from "@/contexts/NotificationsContext";
 
 interface AppBarProps {
   onMenuClick: () => void;
@@ -19,6 +21,16 @@ interface AppBarProps {
 const AppBar = ({ onMenuClick, onLogout }: AppBarProps) => {
   const [perfilOpen, setPerfilOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
+  const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas, limpiarNotificaciones } = useNotifications();
+
+  const getTipoColor = (tipo: string) => {
+    switch (tipo) {
+      case 'error': return 'text-destructive';
+      case 'warning': return 'text-amber-400';
+      case 'success': return 'text-emerald-400';
+      default: return 'text-primary';
+    }
+  };
 
   return (
     <>
@@ -54,30 +66,50 @@ const AppBar = ({ onMenuClick, onLogout }: AppBarProps) => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
                 <Bell className="h-5 w-5" />
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                >
-                  3
-                </Badge>
+                {noLeidas > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                  >
+                    {noLeidas > 9 ? '9+' : noLeidas}
+                  </Badge>
+                )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72 bg-card border-border">
-              <div className="p-3 border-b border-border">
+            <DropdownMenuContent align="end" className="w-80 bg-card border-border max-h-96 overflow-y-auto">
+              <div className="p-3 border-b border-border flex items-center justify-between">
                 <h3 className="font-medium text-foreground">Notificaciones</h3>
+                <div className="flex gap-1">
+                  {noLeidas > 0 && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={marcarTodasLeidas} title="Marcar todas como leídas">
+                      <CheckCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
+                  )}
+                  {notificaciones.length > 0 && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={limpiarNotificaciones} title="Limpiar">
+                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
+                  )}
+                </div>
               </div>
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-                <span className="text-sm text-foreground">Alarma crítica - Planta Norte</span>
-                <span className="text-xs text-muted-foreground">Hace 5 minutos</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-                <span className="text-sm text-foreground">Sensor S-102 desconectado</span>
-                <span className="text-xs text-muted-foreground">Hace 15 minutos</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-                <span className="text-sm text-foreground">Mantenimiento programado</span>
-                <span className="text-xs text-muted-foreground">Hace 1 hora</span>
-              </DropdownMenuItem>
+              {notificaciones.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">Sin notificaciones</div>
+              ) : (
+                notificaciones.slice(0, 20).map((n) => (
+                  <DropdownMenuItem
+                    key={n.id}
+                    className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${!n.leida ? 'bg-muted/30' : ''}`}
+                    onClick={() => marcarLeida(n.id)}
+                  >
+                    <div className="flex items-center gap-2 w-full">
+                      {!n.leida && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
+                      <span className={`text-sm font-medium ${getTipoColor(n.tipo)}`}>{n.titulo}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground pl-4">{n.mensaje}</span>
+                    <span className="text-xs text-muted-foreground/60 pl-4">{n.fechaHora}</span>
+                  </DropdownMenuItem>
+                ))
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 

@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { RolUsuario } from "@/contexts/AuthContext";
 import { ShieldCheck, Lock, Unlock } from "lucide-react";
+import { useNotifications } from "@/contexts/NotificationsContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,6 +70,7 @@ const getRangoBadgeVariant = (rango: string) => {
 
 const GestionEmpleados = () => {
   const { isAdmin, addAuditLog, usuario } = useAuth();
+  const { addNotificacion } = useNotifications();
   const [empleados, setEmpleados] = useState<Empleado[]>(initialEmpleados);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedEmpleado, setSelectedEmpleado] = useState<Empleado | null>(null);
@@ -191,9 +193,10 @@ const GestionEmpleados = () => {
         objetoAfectado: `${empleadoToBlock.nombreCompleto} (${empleadoToBlock.id})`,
         modulo: "Empleados",
       });
-      toast({
-        title: newStatus ? "Acceso desbloqueado" : "Acceso bloqueado",
-        description: `${empleadoToBlock.nombreCompleto} ha sido ${newStatus ? "desbloqueado" : "bloqueado"}.`,
+      addNotificacion({
+        titulo: newStatus ? "Acceso desbloqueado" : "Acceso bloqueado",
+        mensaje: `${usuario?.nombre || "Admin"} ha ${newStatus ? "desbloqueado" : "bloqueado"} a ${empleadoToBlock.nombreCompleto}.`,
+        tipo: newStatus ? 'success' : 'warning',
       });
     }
     setBlockDialogOpen(false);
@@ -218,9 +221,10 @@ const GestionEmpleados = () => {
         objetoAfectado: `${empleadoToPromote.nombreCompleto}: ${oldRol} → ${newRol}`,
         modulo: "Empleados",
       });
-      toast({
-        title: "Rol actualizado",
-        description: `${empleadoToPromote.nombreCompleto} ahora es ${newRol}.`,
+      addNotificacion({
+        titulo: "Cambio de rol",
+        mensaje: `${usuario?.nombre || "Admin"} cambió el rol de ${empleadoToPromote.nombreCompleto}: ${oldRol} → ${newRol}.`,
+        tipo: 'info',
       });
     }
     setRolDialogOpen(false);
