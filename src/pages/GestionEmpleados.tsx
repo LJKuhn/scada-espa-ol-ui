@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { RolUsuario } from "@/contexts/AuthContext";
-import { ShieldCheck, Lock, Unlock } from "lucide-react";
+import { ShieldCheck, Lock, Unlock, History } from "lucide-react";
+import HistorialEmpleadoDialog from "@/components/HistorialEmpleadoDialog";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import {
   AlertDialog,
@@ -69,8 +70,10 @@ const getRangoBadgeVariant = (rango: string) => {
 };
 
 const GestionEmpleados = () => {
-  const { isAdmin, addAuditLog, usuario } = useAuth();
+  const { isAdmin, addAuditLog, usuario, auditLogs } = useAuth();
   const { addNotificacion } = useNotifications();
+  const [historialOpen, setHistorialOpen] = useState(false);
+  const [empleadoHistorial, setEmpleadoHistorial] = useState<Empleado | null>(null);
   const [empleados, setEmpleados] = useState<Empleado[]>(initialEmpleados);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedEmpleado, setSelectedEmpleado] = useState<Empleado | null>(null);
@@ -231,9 +234,34 @@ const GestionEmpleados = () => {
     setEmpleadoToPromote(null);
   };
 
-  const extraActions = isAdmin
-    ? (empleado: Empleado) => (
-        <div className="flex gap-1">
+  const handleViewHistorial = (empleado: Empleado) => {
+    setEmpleadoHistorial(empleado);
+    setHistorialOpen(true);
+  };
+
+  const getLogsForEmpleado = (empleado: Empleado) => {
+    const nombre = empleado.nombreCompleto.toLowerCase();
+    const id = empleado.id.toLowerCase();
+    return auditLogs.filter(
+      (log) =>
+        log.usuario.toLowerCase() === nombre.toLowerCase() ||
+        log.objetoAfectado.toLowerCase().includes(nombre.toLowerCase()) ||
+        log.objetoAfectado.toLowerCase().includes(id)
+    );
+  };
+
+  const extraActions = (empleado: Empleado) => (
+    <div className="flex gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => handleViewHistorial(empleado)}
+        title="Ver Historial"
+      >
+        <History className="h-4 w-4 text-muted-foreground" />
+      </Button>
+      {isAdmin && (
+        <>
           <Button
             variant="ghost"
             size="icon"
@@ -254,9 +282,10 @@ const GestionEmpleados = () => {
               <Unlock className="h-4 w-4 text-emerald-400" />
             )}
           </Button>
-        </div>
-      )
-    : undefined;
+        </>
+      )}
+    </div>
+  );
 
   return (
     <div>
@@ -348,6 +377,15 @@ const GestionEmpleados = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Historial Dialog */}
+      {empleadoHistorial && (
+        <HistorialEmpleadoDialog
+          open={historialOpen}
+          onOpenChange={setHistorialOpen}
+          nombreEmpleado={empleadoHistorial.nombreCompleto}
+          logs={getLogsForEmpleado(empleadoHistorial)}
+        />
+      )}
     </div>
   );
 };
