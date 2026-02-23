@@ -9,7 +9,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Clock, Activity } from "lucide-react";
+import { Search, Clock, Activity, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 
 interface HistorialEmpleadoDialogProps {
   open: boolean;
@@ -28,6 +30,22 @@ const getAccionColor = (accion: string) => {
 const HistorialEmpleadoDialog = ({ open, onOpenChange, nombreEmpleado, logs }: HistorialEmpleadoDialogProps) => {
   const [busqueda, setBusqueda] = useState("");
 
+  const exportarCSV = () => {
+    const headers = ["Fecha/Hora", "Acción", "Objeto Afectado", "Módulo"];
+    const csv = [
+      headers.join(","),
+      ...logsFiltrados.map((l) =>
+        [l.fechaHora, l.accion, `"${l.objetoAfectado}"`, l.modulo].join(",")
+      ),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `historial_${nombreEmpleado.replace(/\s/g, "_")}_${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    toast({ title: "Exportación completada", description: `${logsFiltrados.length} registros exportados` });
+  };
+
   const logsFiltrados = useMemo(() => {
     if (!busqueda) return logs;
     const q = busqueda.toLowerCase();
@@ -42,13 +60,16 @@ const HistorialEmpleadoDialog = ({ open, onOpenChange, nombreEmpleado, logs }: H
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg bg-card border-border">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
           <DialogTitle className="text-foreground flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
             Historial de {nombreEmpleado}
           </DialogTitle>
+          <Button variant="outline" size="sm" onClick={exportarCSV} disabled={logsFiltrados.length === 0}>
+            <Download className="h-4 w-4 mr-1" />
+            CSV
+          </Button>
         </DialogHeader>
-
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
